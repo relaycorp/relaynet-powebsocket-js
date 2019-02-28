@@ -1,2 +1,3 @@
-# relaynet-posocket-js
-JavaScript library implementing the PoSocket binding
+# relaynet-powebsocket-js
+
+JavaScript library implementing the [PoWebSocket](https://github.com/relaynet/specs/blob/master/rs016-powebsocket.md) binding.
