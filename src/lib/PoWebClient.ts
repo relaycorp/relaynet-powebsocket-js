@@ -29,7 +29,7 @@ export class PoWebClient {
   private static readonly DEFAULT_LOCAL_PORT = 276;
   private static readonly DEFAULT_REMOVE_PORT = 443;
 
-  constructor(
+  protected constructor(
     public readonly hostName: string,
     public readonly port: number,
     public readonly useTLS: boolean,
