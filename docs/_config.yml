@@ -1,0 +1,13 @@
+title: Relaynet PoWeb binding for JS
+
+markdown: kramdown
+
+baseurl: /relaynet-poweb-js
+destination: ../build/docs
+remote_theme: pmarsceill/just-the-docs@v0.2.8
+
+search_enabled: false
+
+exclude:
+  - Gemfile
+  - vendor
