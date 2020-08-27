@@ -26,6 +26,24 @@ describe('PoWebClient', () => {
 
       expect(client.port).toEqual(port);
     });
+
+    test('Base URL should factor in the host name, port and use of TLS', () => {
+      const client = PoWebClient.initLocal();
+
+      expect(client.internalAxios.defaults.baseURL).toEqual('http://127.0.0.1:276/v1');
+    });
+
+    test('HTTP agent should be configured with Keep-Alive', () => {
+      const client = PoWebClient.initLocal();
+
+      expect(client.internalAxios.defaults.httpAgent.keepAlive).toEqual(true);
+    });
+
+    test('Default timeout should be 3 seconds', () => {
+      const client = PoWebClient.initLocal();
+
+      expect(client.internalAxios.defaults.timeout).toEqual(3_000);
+    });
   });
 
   describe('initRemote', () => {
@@ -55,5 +73,37 @@ describe('PoWebClient', () => {
 
       expect(client.port).toEqual(port);
     });
+
+    test('Base URL should factor in the host name, port and use of TLS', () => {
+      const client = PoWebClient.initRemote(hostName);
+
+      expect(client.internalAxios.defaults.baseURL).toEqual(`https://${hostName}:443/v1`);
+    });
+
+    test('HTTPS agent should be configured with Keep-Alive', () => {
+      const client = PoWebClient.initRemote(hostName);
+
+      expect(client.internalAxios.defaults.httpsAgent.keepAlive).toEqual(true);
+    });
+
+    test('Default timeout should be 5 seconds', () => {
+      const client = PoWebClient.initRemote(hostName);
+
+      expect(client.internalAxios.defaults.timeout).toEqual(5_000);
+    });
+  });
+
+  describe('preRegister', () => {
+    test.todo('Request method should be POST');
+
+    test.todo('Endpoint should be /v1/pre-registrations');
+
+    test.todo('Request body should be empty');
+
+    test.todo('Response Content-Type other than application/vnd.relaynet.cra should be refused');
+
+    test.todo('20X response status other than 200 should throw an error');
+
+    test.todo('CRA should be output serialized if status is 200');
   });
 });
