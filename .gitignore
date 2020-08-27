@@ -3,6 +3,7 @@ build
 test
 src/**.js
 coverage
+build/*/integration_tests/**
 
 docs/.bundle
 docs/.jekyll-cache
