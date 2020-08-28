@@ -1,3 +1,4 @@
+import { PrivateNodeRegistration } from '@relaycorp/relaynet-core';
 import axios, { AxiosInstance } from 'axios';
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
@@ -11,7 +12,8 @@ const DEFAULT_REMOTE_TIMEOUT_MS = 5_000;
 
 const OCTETS_IN_ONE_MIB = 2 ** 20;
 
-export const PNRA_CONTENT_TYPE = 'application/vnd.relaynet.pnra';
+export const PNRA_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.authorization';
+export const PNR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.registration';
 
 /**
  * PoWeb client.
@@ -36,6 +38,21 @@ export class PoWebClient {
    */
   public static initRemote(hostName: string, port: number = DEFAULT_REMOVE_PORT): PoWebClient {
     return new PoWebClient(hostName, port, true, DEFAULT_REMOTE_TIMEOUT_MS);
+  }
+
+  private static requireResponseStatusToEqual(actualStatus: number, expectedStatus: number): void {
+    if (actualStatus !== expectedStatus) {
+      throw new ServerError(`Unexpected response status (${actualStatus})`);
+    }
+  }
+
+  private static requireResponseContentTypeToEqual(
+    actualContentType: string,
+    expectedContentType: string,
+  ): void {
+    if (actualContentType !== expectedContentType) {
+      throw new ServerError(`Server responded with invalid content type (${actualContentType})`);
+    }
   }
 
   /**
@@ -65,20 +82,38 @@ export class PoWebClient {
   /**
    * Request a Private Node Registration Authorization (PNRA).
    *
+   * @return The PNRA serialized
    * @throws [ServerError] If the server doesn't adhere to the protocol
    */
-  public async preRegister(): Promise<ArrayBuffer> {
+  public async preRegisterNode(): Promise<ArrayBuffer> {
     const response = await this.internalAxios.post('/pre-registrations');
 
-    if (response.status !== 200) {
-      throw new ServerError(`Unexpected response status (${response.status})`);
-    }
-
-    const contentType = response.headers['content-type'];
-    if (contentType !== PNRA_CONTENT_TYPE) {
-      throw new ServerError(`Server responded with invalid content type (${contentType})`);
-    }
+    PoWebClient.requireResponseStatusToEqual(response.status, 200);
+    PoWebClient.requireResponseContentTypeToEqual(
+      response.headers['content-type'],
+      PNRA_CONTENT_TYPE,
+    );
 
     return response.data;
+  }
+
+  /**
+   * Register a private node.
+   *
+   * @param pnrrSerialized The Private Node Registration Request
+   */
+  public async registerNode(pnrrSerialized: ArrayBuffer): Promise<PrivateNodeRegistration> {
+    const response = await this.internalAxios.post('/nodes', pnrrSerialized);
+    PoWebClient.requireResponseStatusToEqual(response.status, 200);
+    PoWebClient.requireResponseContentTypeToEqual(
+      response.headers['content-type'],
+      PNR_CONTENT_TYPE,
+    );
+
+    try {
+      return PrivateNodeRegistration.deserialize(response.data);
+    } catch (exc) {
+      throw new ServerError(exc, 'Malformed registration received');
+    }
   }
 }

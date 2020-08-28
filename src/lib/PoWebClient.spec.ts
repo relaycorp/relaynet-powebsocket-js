@@ -1,10 +1,16 @@
 /* tslint:disable:no-let */
 
+import {
+  generateRSAKeyPair,
+  issueEndpointCertificate,
+  issueGatewayCertificate,
+  PrivateNodeRegistration,
+} from '@relaycorp/relaynet-core';
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 
 import { ServerError } from './errors';
-import { PNRA_CONTENT_TYPE, PoWebClient } from './PoWebClient';
+import { PNR_CONTENT_TYPE, PNRA_CONTENT_TYPE, PoWebClient } from './PoWebClient';
 
 describe('PoWebClient', () => {
   describe('Common Axios instance defaults', () => {
@@ -119,7 +125,7 @@ describe('PoWebClient', () => {
     });
   });
 
-  describe('preRegister', () => {
+  describe('preRegisterNode', () => {
     let client: PoWebClient;
     let mockAxios: MockAdapter;
     beforeEach(() => {
@@ -132,7 +138,7 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(200, null, { 'content-type': PNRA_CONTENT_TYPE });
 
-      await client.preRegister();
+      await client.preRegisterNode();
 
       expect(mockAxios.history.post).toHaveLength(1);
       expect(mockAxios.history.post[0].url).toEqual('/pre-registrations');
@@ -145,7 +151,7 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(200, null, { 'content-type': invalidContentType });
 
-      await expect(client.preRegister()).rejects.toEqual(
+      await expect(client.preRegisterNode()).rejects.toEqual(
         new ServerError(`Server responded with invalid content type (${invalidContentType})`),
       );
     });
@@ -156,7 +162,7 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(statusCode, null, { 'content-type': PNRA_CONTENT_TYPE });
 
-      await expect(client.preRegister()).rejects.toEqual(
+      await expect(client.preRegisterNode()).rejects.toEqual(
         new ServerError(`Unexpected response status (${statusCode})`),
       );
     });
@@ -169,10 +175,111 @@ describe('PoWebClient', () => {
           'content-type': PNRA_CONTENT_TYPE,
         });
 
-      const authorizationSerialized = await client.preRegister();
+      const authorizationSerialized = await client.preRegisterNode();
 
       expect(
         expectedAuthorizationSerialized.equals(Buffer.from(authorizationSerialized)),
+      ).toBeTruthy();
+    });
+  });
+
+  describe('registerNode', () => {
+    let client: PoWebClient;
+    let mockAxios: MockAdapter;
+    beforeEach(() => {
+      client = PoWebClient.initLocal();
+      mockAxios = new MockAdapter(client.internalAxios);
+    });
+
+    const pnraSerialized = bufferToArray(Buffer.from('the authorization'));
+
+    let expectedRegistration: PrivateNodeRegistration;
+    let expectedRegistrationSerialized: ArrayBuffer;
+    beforeAll(async () => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const gatewayKeyPair = await generateRSAKeyPair();
+      const gatewayCertificate = await issueGatewayCertificate({
+        issuerPrivateKey: gatewayKeyPair.privateKey,
+        subjectPublicKey: gatewayKeyPair.publicKey,
+        validityEndDate: tomorrow,
+      });
+
+      const privateNodeKeyPair = await generateRSAKeyPair();
+      const privateNodeCertificate = await issueEndpointCertificate({
+        issuerCertificate: gatewayCertificate,
+        issuerPrivateKey: gatewayKeyPair.privateKey,
+        subjectPublicKey: privateNodeKeyPair.publicKey,
+        validityEndDate: tomorrow,
+      });
+
+      expectedRegistration = new PrivateNodeRegistration(
+        privateNodeCertificate,
+        gatewayCertificate,
+      );
+      expectedRegistrationSerialized = expectedRegistration.serialize();
+    });
+
+    test('PNRA should be POSTed to /v1/nodes', async () => {
+      mockAxios
+        .onPost('/nodes')
+        .reply(200, expectedRegistrationSerialized, { 'content-type': PNR_CONTENT_TYPE });
+
+      await client.registerNode(pnraSerialized);
+
+      expect(mockAxios.history.post).toHaveLength(1);
+      expect(mockAxios.history.post[0].url).toEqual('/nodes');
+      expect(
+        Buffer.from(mockAxios.history.post[0].data).equals(Buffer.from(pnraSerialized)),
+      ).toBeTruthy();
+    });
+
+    test('An invalid response content type should be refused', async () => {
+      const invalidContentType = 'text/plain';
+      mockAxios
+        .onPost('/nodes')
+        .reply(200, expectedRegistrationSerialized, { 'content-type': invalidContentType });
+
+      await expect(client.registerNode(pnraSerialized)).rejects.toEqual(
+        new ServerError(`Server responded with invalid content type (${invalidContentType})`),
+      );
+    });
+
+    test('20X response status other than 200 should throw an error', async () => {
+      const statusCode = 201;
+      mockAxios
+        .onPost('/nodes')
+        .reply(statusCode, expectedRegistrationSerialized, { 'content-type': PNR_CONTENT_TYPE });
+
+      await expect(client.registerNode(pnraSerialized)).rejects.toEqual(
+        new ServerError(`Unexpected response status (${statusCode})`),
+      );
+    });
+
+    test('Malformed registrations should be refused', async () => {
+      const invalidRegistration = Buffer.from('invalid');
+      mockAxios
+        .onPost('/nodes')
+        .reply(200, bufferToArray(invalidRegistration), { 'content-type': PNR_CONTENT_TYPE });
+
+      await expect(client.registerNode(pnraSerialized)).rejects.toMatchObject({
+        message: /^Malformed registration received/,
+      });
+    });
+
+    test('Registration should be output if response status is 200', async () => {
+      mockAxios
+        .onPost('/nodes')
+        .reply(200, expectedRegistrationSerialized, { 'content-type': PNR_CONTENT_TYPE });
+
+      const registration = await client.registerNode(pnraSerialized);
+
+      expect(
+        expectedRegistration.privateNodeCertificate.isEqual(registration.privateNodeCertificate),
+      ).toBeTruthy();
+      expect(
+        expectedRegistration.gatewayCertificate.isEqual(registration.gatewayCertificate),
       ).toBeTruthy();
     });
   });
