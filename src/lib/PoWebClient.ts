@@ -9,6 +9,8 @@ const DEFAULT_REMOVE_PORT = 443;
 const DEFAULT_LOCAL_TIMEOUT_MS = 3_000;
 const DEFAULT_REMOTE_TIMEOUT_MS = 5_000;
 
+const OCTETS_IN_ONE_MIB = 2 ** 20;
+
 export const CRA_CONTENT_TYPE = 'application/vnd.relaynet.cra';
 
 /**
@@ -49,10 +51,13 @@ export class PoWebClient {
   ) {
     const httpSchema = useTLS ? 'https' : 'http';
     const agentName = useTLS ? 'httpsAgent' : 'httpAgent';
-    const agent = useTLS ? new HttpsAgent({ keepAlive: true }) : new HttpAgent({ keepAlive: true });
+    const agentClass = useTLS ? HttpsAgent : HttpAgent;
     this.internalAxios = axios.create({
+      [agentName]: new agentClass({ keepAlive: true }),
       baseURL: `${httpSchema}://${hostName}:${port}/v1`,
-      [agentName]: agent,
+      maxContentLength: OCTETS_IN_ONE_MIB,
+      maxRedirects: 0,
+      responseType: 'arraybuffer',
       timeout: timeoutMs,
     });
   }

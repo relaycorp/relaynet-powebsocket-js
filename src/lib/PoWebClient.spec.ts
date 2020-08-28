@@ -7,6 +7,26 @@ import { ServerError } from './errors';
 import { CRA_CONTENT_TYPE, PoWebClient } from './PoWebClient';
 
 describe('PoWebClient', () => {
+  describe('Common Axios instance attributes', () => {
+    test('responseType should be ArrayBuffer', () => {
+      const client = PoWebClient.initLocal();
+
+      expect(client.internalAxios.defaults.responseType).toEqual('arraybuffer');
+    });
+
+    test('maxContentLength should be 1 MiB', () => {
+      const client = PoWebClient.initLocal();
+
+      expect(client.internalAxios.defaults.maxContentLength).toEqual(1048576);
+    });
+
+    test('Redirects should be disabled', () => {
+      const client = PoWebClient.initLocal();
+
+      expect(client.internalAxios.defaults.maxRedirects).toEqual(0);
+    });
+  });
+
   describe('initLocal', () => {
     test('Host name should be the localhost IP address', () => {
       const client = PoWebClient.initLocal();
