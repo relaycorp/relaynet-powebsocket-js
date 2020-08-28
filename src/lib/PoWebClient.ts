@@ -11,7 +11,7 @@ const DEFAULT_REMOTE_TIMEOUT_MS = 5_000;
 
 const OCTETS_IN_ONE_MIB = 2 ** 20;
 
-export const CRA_CONTENT_TYPE = 'application/vnd.relaynet.cra';
+export const PNRA_CONTENT_TYPE = 'application/vnd.relaynet.pnra';
 
 /**
  * PoWeb client.
@@ -63,7 +63,7 @@ export class PoWebClient {
   }
 
   /**
-   * Request a Client Registration Authorization (CRA)
+   * Request a Private Node Registration Authorization (PNRA).
    *
    * @throws [ServerError] If the server doesn't adhere to the protocol
    */
@@ -75,7 +75,7 @@ export class PoWebClient {
     }
 
     const contentType = response.headers['content-type'];
-    if (contentType !== CRA_CONTENT_TYPE) {
+    if (contentType !== PNRA_CONTENT_TYPE) {
       throw new ServerError(`Server responded with invalid content type (${contentType})`);
     }
 

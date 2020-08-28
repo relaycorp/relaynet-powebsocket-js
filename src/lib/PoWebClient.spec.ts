@@ -4,10 +4,10 @@ import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 
 import { ServerError } from './errors';
-import { CRA_CONTENT_TYPE, PoWebClient } from './PoWebClient';
+import { PNRA_CONTENT_TYPE, PoWebClient } from './PoWebClient';
 
 describe('PoWebClient', () => {
-  describe('Common Axios instance attributes', () => {
+  describe('Common Axios instance defaults', () => {
     test('responseType should be ArrayBuffer', () => {
       const client = PoWebClient.initLocal();
 
@@ -127,33 +127,15 @@ describe('PoWebClient', () => {
       mockAxios = new MockAdapter(client.internalAxios);
     });
 
-    const defaultReply: readonly [number, any, {}] = [
-      200,
-      null,
-      { 'content-type': CRA_CONTENT_TYPE },
-    ];
-
-    test('Request method should be POST', async () => {
-      mockAxios.onPost('/pre-registrations').reply(...defaultReply);
+    test('Empty request should be POSTed to /v1/pre-registrations', async () => {
+      mockAxios
+        .onPost('/pre-registrations')
+        .reply(200, null, { 'content-type': PNRA_CONTENT_TYPE });
 
       await client.preRegister();
 
       expect(mockAxios.history.post).toHaveLength(1);
-    });
-
-    test('Endpoint should be /v1/pre-registrations', async () => {
-      mockAxios.onPost('/pre-registrations').reply(...defaultReply);
-
-      await client.preRegister();
-
       expect(mockAxios.history.post[0].url).toEqual('/pre-registrations');
-    });
-
-    test('Request body should be empty', async () => {
-      mockAxios.onPost('/pre-registrations').reply(...defaultReply);
-
-      await client.preRegister();
-
       expect(mockAxios.history.post[0].data).toBeUndefined();
     });
 
@@ -172,23 +154,26 @@ describe('PoWebClient', () => {
       const statusCode = 201;
       mockAxios
         .onPost('/pre-registrations')
-        .reply(statusCode, null, { 'content-type': CRA_CONTENT_TYPE });
+        .reply(statusCode, null, { 'content-type': PNRA_CONTENT_TYPE });
 
       await expect(client.preRegister()).rejects.toEqual(
         new ServerError(`Unexpected response status (${statusCode})`),
       );
     });
 
-    test('CRA should be output serialized if status is 200', async () => {
-      const dummyCRABuffer = Buffer.from('the CRA');
-      const dummyCRAArrayBuffer = bufferToArray(dummyCRABuffer);
+    test('Authorization should be output serialized if status is 200', async () => {
+      const expectedAuthorizationSerialized = Buffer.from('the PNRA');
       mockAxios
         .onPost('/pre-registrations')
-        .reply(200, dummyCRAArrayBuffer, { 'content-type': CRA_CONTENT_TYPE });
+        .reply(200, bufferToArray(expectedAuthorizationSerialized), {
+          'content-type': PNRA_CONTENT_TYPE,
+        });
 
-      const cra = await client.preRegister();
+      const authorizationSerialized = await client.preRegister();
 
-      expect(dummyCRABuffer.equals(Buffer.from(cra))).toBeTruthy();
+      expect(
+        expectedAuthorizationSerialized.equals(Buffer.from(authorizationSerialized)),
+      ).toBeTruthy();
     });
   });
 });
