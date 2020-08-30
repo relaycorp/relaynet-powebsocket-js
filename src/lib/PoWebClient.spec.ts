@@ -1,6 +1,7 @@
 /* tslint:disable:no-let */
 
 import {
+  derSerializePublicKey,
   generateRSAKeyPair,
   issueEndpointCertificate,
   issueGatewayCertificate,
@@ -8,6 +9,7 @@ import {
 } from '@relaycorp/relaynet-core';
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
+import { createHash } from 'crypto';
 
 import { ServerError } from './errors';
 import { PNR_CONTENT_TYPE, PNRA_CONTENT_TYPE, PoWebClient } from './PoWebClient';
@@ -133,16 +135,34 @@ describe('PoWebClient', () => {
       mockAxios = new MockAdapter(client.internalAxios);
     });
 
-    test('Empty request should be POSTed to /v1/pre-registrations', async () => {
+    let nodePublicKey: CryptoKey;
+    beforeAll(async () => {
+      const keyPair = await generateRSAKeyPair();
+      nodePublicKey = keyPair.publicKey;
+    });
+
+    test('Request should be POSTed to /v1/pre-registrations', async () => {
       mockAxios
         .onPost('/pre-registrations')
         .reply(200, null, { 'content-type': PNRA_CONTENT_TYPE });
 
-      await client.preRegisterNode();
+      await client.preRegisterNode(nodePublicKey);
 
       expect(mockAxios.history.post).toHaveLength(1);
       expect(mockAxios.history.post[0].url).toEqual('/pre-registrations');
-      expect(mockAxios.history.post[0].data).toBeUndefined();
+      expect(mockAxios.history.post[0].headers).toHaveProperty('Content-Type', 'text/plain');
+    });
+
+    test('Request body should be SHA-256 digest of the node public key', async () => {
+      mockAxios
+        .onPost('/pre-registrations')
+        .reply(200, null, { 'content-type': PNRA_CONTENT_TYPE });
+
+      await client.preRegisterNode(nodePublicKey);
+
+      const publicKeySerialized = await derSerializePublicKey(nodePublicKey);
+      const expectedDigest = createHash('sha256').update(publicKeySerialized).digest('hex');
+      expect(Buffer.from(mockAxios.history.post[0].data).toString()).toEqual(expectedDigest);
     });
 
     test('An invalid response content type should be refused', async () => {
@@ -151,7 +171,7 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(200, null, { 'content-type': invalidContentType });
 
-      await expect(client.preRegisterNode()).rejects.toEqual(
+      await expect(client.preRegisterNode(nodePublicKey)).rejects.toEqual(
         new ServerError(`Server responded with invalid content type (${invalidContentType})`),
       );
     });
@@ -162,7 +182,7 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(statusCode, null, { 'content-type': PNRA_CONTENT_TYPE });
 
-      await expect(client.preRegisterNode()).rejects.toEqual(
+      await expect(client.preRegisterNode(nodePublicKey)).rejects.toEqual(
         new ServerError(`Unexpected response status (${statusCode})`),
       );
     });
@@ -175,7 +195,7 @@ describe('PoWebClient', () => {
           'content-type': PNRA_CONTENT_TYPE,
         });
 
-      const authorizationSerialized = await client.preRegisterNode();
+      const authorizationSerialized = await client.preRegisterNode(nodePublicKey);
 
       expect(
         expectedAuthorizationSerialized.equals(Buffer.from(authorizationSerialized)),

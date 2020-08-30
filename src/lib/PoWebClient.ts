@@ -1,5 +1,6 @@
-import { PrivateNodeRegistration } from '@relaycorp/relaynet-core';
+import { derSerializePublicKey, PrivateNodeRegistration } from '@relaycorp/relaynet-core';
 import axios, { AxiosInstance } from 'axios';
+import { createHash } from 'crypto';
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
 import { ServerError } from './errors';
@@ -82,11 +83,16 @@ export class PoWebClient {
   /**
    * Request a Private Node Registration Authorization (PNRA).
    *
+   * @param nodePublicKey The public key of the private node requesting authorization
    * @return The PNRA serialized
    * @throws [ServerError] If the server doesn't adhere to the protocol
    */
-  public async preRegisterNode(): Promise<ArrayBuffer> {
-    const response = await this.internalAxios.post('/pre-registrations');
+  public async preRegisterNode(nodePublicKey: CryptoKey): Promise<ArrayBuffer> {
+    const nodePublicKeySerialized = await derSerializePublicKey(nodePublicKey);
+    const nodePublicKeyDigest = sha256Hex(nodePublicKeySerialized);
+    const response = await this.internalAxios.post('/pre-registrations', nodePublicKeyDigest, {
+      headers: { 'content-type': 'text/plain' },
+    });
 
     PoWebClient.requireResponseStatusToEqual(response.status, 200);
     PoWebClient.requireResponseContentTypeToEqual(
@@ -116,4 +122,8 @@ export class PoWebClient {
       throw new ServerError(exc, 'Malformed registration received');
     }
   }
+}
+
+function sha256Hex(plaintext: Buffer): string {
+  return createHash('sha256').update(plaintext).digest('hex');
 }
