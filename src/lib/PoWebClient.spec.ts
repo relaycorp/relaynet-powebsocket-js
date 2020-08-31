@@ -250,6 +250,7 @@ describe('PoWebClient', () => {
 
       expect(mockAxios.history.post).toHaveLength(1);
       expect(mockAxios.history.post[0].url).toEqual('/nodes');
+      expect(mockAxios.history.post[0].headers).toHaveProperty('Content-Type', PNRA_CONTENT_TYPE);
       expect(
         Buffer.from(mockAxios.history.post[0].data).equals(Buffer.from(pnraSerialized)),
       ).toBeTruthy();

@@ -109,7 +109,9 @@ export class PoWebClient {
    * @param pnrrSerialized The Private Node Registration Request
    */
   public async registerNode(pnrrSerialized: ArrayBuffer): Promise<PrivateNodeRegistration> {
-    const response = await this.internalAxios.post('/nodes', pnrrSerialized);
+    const response = await this.internalAxios.post('/nodes', pnrrSerialized, {
+      headers: { 'content-type': PNRA_CONTENT_TYPE },
+    });
     PoWebClient.requireResponseStatusToEqual(response.status, 200);
     PoWebClient.requireResponseContentTypeToEqual(
       response.headers['content-type'],
