@@ -12,7 +12,7 @@ import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 
 import { ServerError } from './errors';
-import { PNR_CONTENT_TYPE, PNRA_CONTENT_TYPE, PoWebClient } from './PoWebClient';
+import { PNR_CONTENT_TYPE, PNRA_CONTENT_TYPE, PNRR_CONTENT_TYPE, PoWebClient } from './PoWebClient';
 
 describe('PoWebClient', () => {
   describe('Common Axios instance defaults', () => {
@@ -250,7 +250,7 @@ describe('PoWebClient', () => {
 
       expect(mockAxios.history.post).toHaveLength(1);
       expect(mockAxios.history.post[0].url).toEqual('/nodes');
-      expect(mockAxios.history.post[0].headers).toHaveProperty('Content-Type', PNRA_CONTENT_TYPE);
+      expect(mockAxios.history.post[0].headers).toHaveProperty('Content-Type', PNRR_CONTENT_TYPE);
       expect(
         Buffer.from(mockAxios.history.post[0].data).equals(Buffer.from(pnraSerialized)),
       ).toBeTruthy();

@@ -14,6 +14,7 @@ const DEFAULT_REMOTE_TIMEOUT_MS = 5_000;
 const OCTETS_IN_ONE_MIB = 2 ** 20;
 
 export const PNRA_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.authorization';
+export const PNRR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.request';
 export const PNR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.registration';
 
 /**
@@ -110,7 +111,7 @@ export class PoWebClient {
    */
   public async registerNode(pnrrSerialized: ArrayBuffer): Promise<PrivateNodeRegistration> {
     const response = await this.internalAxios.post('/nodes', pnrrSerialized, {
-      headers: { 'content-type': PNRA_CONTENT_TYPE },
+      headers: { 'content-type': PNRR_CONTENT_TYPE },
     });
     PoWebClient.requireResponseStatusToEqual(response.status, 200);
     PoWebClient.requireResponseContentTypeToEqual(
