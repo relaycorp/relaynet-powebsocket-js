@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@relaycorp/shared-config": "^1.4.2",
-    "@types/jest": "^26.0.13",
+    "@types/jest": "^26.0.14",
     "@types/pkijs": "0.0.5",
     "@types/verror": "^1.10.4",
     "axios-mock-adapter": "^1.18.2",
