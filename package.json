@@ -63,6 +63,9 @@
     "typedoc": "^0.19.2",
     "typescript": "^3.9.7"
   },
+  "peerDependencies": {
+    "@relaycorp/relaynet-core": ">= 1.35.0 < 2"
+  },
   "prettier": "@relaycorp/shared-config/.prettierrc.json",
   "publishConfig": {
     "access": "public",
