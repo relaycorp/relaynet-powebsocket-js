@@ -33,6 +33,12 @@ describe('PoWebClient', () => {
 
       expect(client.internalAxios.defaults.maxRedirects).toEqual(0);
     });
+
+    test('Status validation should be disabled', () => {
+      const client = PoWebClient.initLocal();
+
+      expect(client.internalAxios.defaults.validateStatus).toEqual(null);
+    });
   });
 
   describe('initLocal', () => {

@@ -78,6 +78,7 @@ export class PoWebClient {
       maxRedirects: 0,
       responseType: 'arraybuffer',
       timeout: timeoutMs,
+      validateStatus: null as any,
     });
   }
 
