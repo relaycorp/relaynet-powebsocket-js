@@ -1,16 +1,27 @@
 import {
   derSerializePublicKey,
-  generateRSAKeyPair,
-  issueEndpointCertificate,
-  issueGatewayCertificate,
+  DETACHED_SIGNATURE_TYPES,
   PrivateNodeRegistration,
+  Signer,
 } from '@relaycorp/relaynet-core';
+import { CertificationPath, generateCertificationPath } from '@relaycorp/relaynet-testing';
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 
 import { ServerError } from './errors';
-import { PNR_CONTENT_TYPE, PNRA_CONTENT_TYPE, PNRR_CONTENT_TYPE, PoWebClient } from './PoWebClient';
+import {
+  PARCEL_CONTENT_TYPE,
+  PNR_CONTENT_TYPE,
+  PNRA_CONTENT_TYPE,
+  PNRR_CONTENT_TYPE,
+  PoWebClient,
+} from './PoWebClient';
+
+let certificationPath: CertificationPath;
+beforeAll(async () => {
+  certificationPath = await generateCertificationPath();
+});
 
 describe('PoWebClient', () => {
   describe('Common Axios instance defaults', () => {
@@ -141,8 +152,7 @@ describe('PoWebClient', () => {
 
     let nodePublicKey: CryptoKey;
     beforeAll(async () => {
-      const keyPair = await generateRSAKeyPair();
-      nodePublicKey = keyPair.publicKey;
+      nodePublicKey = await certificationPath.privateGateway.certificate.getPublicKey();
     });
 
     test('Request should be POSTed to /v1/pre-registrations', async () => {
@@ -223,24 +233,9 @@ describe('PoWebClient', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const gatewayKeyPair = await generateRSAKeyPair();
-      const gatewayCertificate = await issueGatewayCertificate({
-        issuerPrivateKey: gatewayKeyPair.privateKey,
-        subjectPublicKey: gatewayKeyPair.publicKey,
-        validityEndDate: tomorrow,
-      });
-
-      const privateNodeKeyPair = await generateRSAKeyPair();
-      const privateNodeCertificate = await issueEndpointCertificate({
-        issuerCertificate: gatewayCertificate,
-        issuerPrivateKey: gatewayKeyPair.privateKey,
-        subjectPublicKey: privateNodeKeyPair.publicKey,
-        validityEndDate: tomorrow,
-      });
-
       expectedRegistration = new PrivateNodeRegistration(
-        privateNodeCertificate,
-        gatewayCertificate,
+        certificationPath.privateGateway.certificate,
+        certificationPath.publicGateway.certificate,
       );
       expectedRegistrationSerialized = expectedRegistration.serialize();
     });
@@ -310,15 +305,51 @@ describe('PoWebClient', () => {
   });
 
   describe('deliverParcel', () => {
-    test.todo('Request should be made with HTTP POST');
+    const parcelSerialized = bufferToArray(Buffer.from('I am a "parcel"'));
+    let signer: Signer;
+    beforeAll(async () => {
+      signer = new Signer(
+        certificationPath.privateGateway.certificate,
+        certificationPath.privateGateway.privateKey,
+      );
+    });
 
-    test.todo('Endpoint should be the one for parcels');
+    let client: PoWebClient;
+    let mockAxios: MockAdapter;
+    beforeEach(() => {
+      client = PoWebClient.initLocal();
+      mockAxios = new MockAdapter(client.internalAxios);
+    });
 
-    test.todo('Request content type should be the appropriate value');
+    test('Parcel should be POSTed to /v1/parcels', async () => {
+      mockAxios.onPost('/parcels').reply(200, null);
 
-    test.todo('Request body should be the parcel serialized');
+      await client.deliverParcel(parcelSerialized, signer);
 
-    test.todo('Delivery should be signed with nonce signer');
+      expect(mockAxios.history.post).toHaveLength(1);
+      expect(mockAxios.history.post[0].url).toEqual('/parcels');
+      expect(mockAxios.history.post[0].headers).toHaveProperty('Content-Type', PARCEL_CONTENT_TYPE);
+      expect(
+        Buffer.from(mockAxios.history.post[0].data).equals(Buffer.from(parcelSerialized)),
+      ).toBeTruthy();
+    });
+
+    test('Delivery should be signed with nonce signer', async () => {
+      mockAxios.onPost('/parcels').reply(200, null);
+
+      await client.deliverParcel(parcelSerialized, signer);
+
+      const authorizationHeaderValue = mockAxios.history.post[0].headers.authorization;
+      expect(authorizationHeaderValue).toBeDefined();
+      expect(authorizationHeaderValue).toStartWith('Relaynet-Countersignature ');
+      const [, countersignatureBase64] = authorizationHeaderValue.split(' ', 2);
+      const countersignature = Buffer.from(countersignatureBase64, 'base64');
+      await DETACHED_SIGNATURE_TYPES.PARCEL_DELIVERY.verify(
+        bufferToArray(countersignature),
+        parcelSerialized,
+        [certificationPath.publicGateway.certificate],
+      );
+    });
 
     test.todo('HTTP 20X should be regarded a successful delivery');
 

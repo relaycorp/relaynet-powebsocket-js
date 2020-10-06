@@ -1,7 +1,8 @@
 import {
   derSerializePublicKey,
-  NonceSigner,
+  DETACHED_SIGNATURE_TYPES,
   PrivateNodeRegistration,
+  Signer,
 } from '@relaycorp/relaynet-core';
 import axios, { AxiosInstance } from 'axios';
 import { createHash } from 'crypto';
@@ -20,6 +21,7 @@ const OCTETS_IN_ONE_MIB = 2 ** 20;
 export const PNRA_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.authorization';
 export const PNRR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.request';
 export const PNR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.registration';
+export const PARCEL_CONTENT_TYPE = 'application/vnd.relaynet.parcel';
 
 /**
  * PoWeb client.
@@ -134,14 +136,16 @@ export class PoWebClient {
   /**
    * Send a parcel to the gateway.
    *
-   * @param _parcelSerialized
-   * @param _nonceSigner
+   * @param parcelSerialized
+   * @param signer
    */
-  public async deliverParcel(
-    _parcelSerialized: ArrayBuffer,
-    _nonceSigner: NonceSigner,
-  ): Promise<void> {
-    throw new Error('implement this thing');
+  public async deliverParcel(parcelSerialized: ArrayBuffer, signer: Signer): Promise<void> {
+    const signature = await signer.sign(parcelSerialized, DETACHED_SIGNATURE_TYPES.PARCEL_DELIVERY);
+    const countersignatureBase64 = Buffer.from(signature).toString('base64');
+    const authorizationHeaderValue = `Relaynet-Countersignature ${countersignatureBase64}`;
+    await this.internalAxios.post('/parcels', parcelSerialized, {
+      headers: { authorization: authorizationHeaderValue, 'content-type': PARCEL_CONTENT_TYPE },
+    });
   }
 }
 
