@@ -1,4 +1,8 @@
-import { derSerializePublicKey, PrivateNodeRegistration } from '@relaycorp/relaynet-core';
+import {
+  derSerializePublicKey,
+  NonceSigner,
+  PrivateNodeRegistration,
+} from '@relaycorp/relaynet-core';
 import axios, { AxiosInstance } from 'axios';
 import { createHash } from 'crypto';
 import { Agent as HttpAgent } from 'http';
@@ -125,6 +129,19 @@ export class PoWebClient {
     } catch (exc) {
       throw new ServerError(exc, 'Malformed registration received');
     }
+  }
+
+  /**
+   * Send a parcel to the gateway.
+   *
+   * @param _parcelSerialized
+   * @param _nonceSigner
+   */
+  public async deliverParcel(
+    _parcelSerialized: ArrayBuffer,
+    _nonceSigner: NonceSigner,
+  ): Promise<void> {
+    throw new Error('implement this thing');
   }
 }
 

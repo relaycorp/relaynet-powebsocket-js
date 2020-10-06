@@ -1,5 +1,3 @@
-/* tslint:disable:no-let */
-
 import {
   derSerializePublicKey,
   generateRSAKeyPair,
@@ -309,5 +307,23 @@ describe('PoWebClient', () => {
         expectedRegistration.gatewayCertificate.isEqual(registration.gatewayCertificate),
       ).toBeTruthy();
     });
+  });
+
+  describe('deliverParcel', () => {
+    test.todo('Request should be made with HTTP POST');
+
+    test.todo('Endpoint should be the one for parcels');
+
+    test.todo('Request content type should be the appropriate value');
+
+    test.todo('Request body should be the parcel serialized');
+
+    test.todo('Delivery should be signed with nonce signer');
+
+    test.todo('HTTP 20X should be regarded a successful delivery');
+
+    test.todo('HTTP 403 should throw a RefusedParcelException');
+
+    test.todo('Other client exceptions should be propagated');
   });
 });
