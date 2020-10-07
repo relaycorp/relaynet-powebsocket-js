@@ -9,7 +9,7 @@ import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 
-import { ServerError } from './errors';
+import { ParcelDeliveryError, RefusedParcelError, ServerError } from './errors';
 import {
   PARCEL_CONTENT_TYPE,
   PNR_CONTENT_TYPE,
@@ -46,7 +46,7 @@ describe('PoWebClient', () => {
     test('Status validation should be disabled', () => {
       const client = PoWebClient.initLocal();
 
-      expect(client.internalAxios.defaults.validateStatus).toEqual(null);
+      expect(client.internalAxios.defaults.validateStatus?.(400)).toEqual(true);
     });
   });
 
@@ -351,10 +351,66 @@ describe('PoWebClient', () => {
       );
     });
 
-    test.todo('HTTP 20X should be regarded a successful delivery');
+    test('HTTP 20X should be regarded a successful delivery', async () => {
+      mockAxios.onPost('/parcels').reply(200, null);
+      await client.deliverParcel(parcelSerialized, signer);
 
-    test.todo('HTTP 403 should throw a RefusedParcelException');
+      mockAxios.onPost('/parcels').reply(299, null);
+      await client.deliverParcel(parcelSerialized, signer);
+    });
 
-    test.todo('Other client exceptions should be propagated');
+    test('HTTP 403 should throw a RefusedParcelError', async () => {
+      mockAxios.onPost('/parcels').reply(403, null);
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toBeInstanceOf(RefusedParcelError);
+      expect(error.message).toEqual('Parcel was rejected');
+    });
+
+    test('RefusedParcelError should include rejection reason if available', async () => {
+      const message = 'Not enough postage';
+      mockAxios.onPost('/parcels').reply(403, { message });
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toBeInstanceOf(RefusedParcelError);
+      expect(error.message).toEqual(`Parcel was rejected: ${message}`);
+    });
+
+    test('HTTP 50X should throw a ServerError', async () => {
+      mockAxios.onPost('/parcels').reply(500, null);
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toBeInstanceOf(ServerError);
+      expect(error.message).toEqual('Server was unable to get parcel (HTTP 500)');
+    });
+
+    test('HTTP responses other than 20X/403/50X should throw errors', async () => {
+      mockAxios.onPost('/parcels').reply(400, null);
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toBeInstanceOf(ParcelDeliveryError);
+      expect(error.message).toEqual('Could not deliver parcel (HTTP 400)');
+    });
+
+    test('Other client exceptions should be propagated', async () => {
+      mockAxios.onPost('/parcels').networkError();
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toHaveProperty('isAxiosError', true);
+    });
   });
 });
+
+async function getRejection(promise: Promise<any>): Promise<Error> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+  throw new Error('Expected promise to reject');
+}

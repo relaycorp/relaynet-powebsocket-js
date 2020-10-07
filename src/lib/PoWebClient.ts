@@ -8,7 +8,7 @@ import axios, { AxiosInstance } from 'axios';
 import { createHash } from 'crypto';
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
-import { ServerError } from './errors';
+import { ParcelDeliveryError, RefusedParcelError, ServerError } from './errors';
 
 const DEFAULT_LOCAL_PORT = 276;
 const DEFAULT_REMOVE_PORT = 443;
@@ -84,7 +84,7 @@ export class PoWebClient {
       maxRedirects: 0,
       responseType: 'arraybuffer',
       timeout: timeoutMs,
-      validateStatus: null as any,
+      validateStatus: () => true,
     });
   }
 
@@ -143,9 +143,24 @@ export class PoWebClient {
     const signature = await signer.sign(parcelSerialized, DETACHED_SIGNATURE_TYPES.PARCEL_DELIVERY);
     const countersignatureBase64 = Buffer.from(signature).toString('base64');
     const authorizationHeaderValue = `Relaynet-Countersignature ${countersignatureBase64}`;
-    await this.internalAxios.post('/parcels', parcelSerialized, {
+    const response = await this.internalAxios.post('/parcels', parcelSerialized, {
       headers: { authorization: authorizationHeaderValue, 'content-type': PARCEL_CONTENT_TYPE },
     });
+
+    if (response.status < 300) {
+      return;
+    }
+
+    const errorMessage = response.data?.message;
+    if (response.status === 403) {
+      throw new RefusedParcelError(
+        errorMessage ? `Parcel was rejected: ${errorMessage}` : 'Parcel was rejected',
+      );
+    }
+    if (500 <= response.status) {
+      throw new ServerError(`Server was unable to get parcel (HTTP ${response.status})`);
+    }
+    throw new ParcelDeliveryError(`Could not deliver parcel (HTTP ${response.status})`);
   }
 }
 
