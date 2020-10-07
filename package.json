@@ -40,15 +40,15 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@relaycorp/relaynet-core": "^1.35.0",
+    "@relaycorp/relaynet-core": "^1.36.0",
     "axios": "^0.20.0",
     "buffer-to-arraybuffer": "0.0.5",
     "verror": "^1.10.0"
   },
   "devDependencies": {
+    "@relaycorp/relaynet-testing": "^1.0.0",
     "@relaycorp/shared-config": "^1.4.4",
     "@types/jest": "^26.0.14",
-    "@types/pkijs": "0.0.5",
     "@types/verror": "^1.10.4",
     "axios-mock-adapter": "^1.18.2",
     "del-cli": "^3.0.0",
@@ -62,6 +62,9 @@
     "tslint": "^5.20.1",
     "typedoc": "^0.19.2",
     "typescript": "^3.9.7"
+  },
+  "peerDependencies": {
+    "@relaycorp/relaynet-core": ">= 1.35.0 < 2"
   },
   "prettier": "@relaycorp/shared-config/.prettierrc.json",
   "publishConfig": {

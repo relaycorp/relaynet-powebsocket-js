@@ -1,18 +1,27 @@
-/* tslint:disable:no-let */
-
 import {
   derSerializePublicKey,
-  generateRSAKeyPair,
-  issueEndpointCertificate,
-  issueGatewayCertificate,
+  DETACHED_SIGNATURE_TYPES,
   PrivateNodeRegistration,
+  Signer,
 } from '@relaycorp/relaynet-core';
+import { CertificationPath, generateCertificationPath } from '@relaycorp/relaynet-testing';
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 
-import { ServerError } from './errors';
-import { PNR_CONTENT_TYPE, PNRA_CONTENT_TYPE, PNRR_CONTENT_TYPE, PoWebClient } from './PoWebClient';
+import { ParcelDeliveryError, RefusedParcelError, ServerError } from './errors';
+import {
+  PARCEL_CONTENT_TYPE,
+  PNR_CONTENT_TYPE,
+  PNRA_CONTENT_TYPE,
+  PNRR_CONTENT_TYPE,
+  PoWebClient,
+} from './PoWebClient';
+
+let certificationPath: CertificationPath;
+beforeAll(async () => {
+  certificationPath = await generateCertificationPath();
+});
 
 describe('PoWebClient', () => {
   describe('Common Axios instance defaults', () => {
@@ -37,7 +46,7 @@ describe('PoWebClient', () => {
     test('Status validation should be disabled', () => {
       const client = PoWebClient.initLocal();
 
-      expect(client.internalAxios.defaults.validateStatus).toEqual(null);
+      expect(client.internalAxios.defaults.validateStatus?.(400)).toEqual(true);
     });
   });
 
@@ -143,8 +152,7 @@ describe('PoWebClient', () => {
 
     let nodePublicKey: CryptoKey;
     beforeAll(async () => {
-      const keyPair = await generateRSAKeyPair();
-      nodePublicKey = keyPair.publicKey;
+      nodePublicKey = await certificationPath.privateGateway.certificate.getPublicKey();
     });
 
     test('Request should be POSTed to /v1/pre-registrations', async () => {
@@ -225,24 +233,9 @@ describe('PoWebClient', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const gatewayKeyPair = await generateRSAKeyPair();
-      const gatewayCertificate = await issueGatewayCertificate({
-        issuerPrivateKey: gatewayKeyPair.privateKey,
-        subjectPublicKey: gatewayKeyPair.publicKey,
-        validityEndDate: tomorrow,
-      });
-
-      const privateNodeKeyPair = await generateRSAKeyPair();
-      const privateNodeCertificate = await issueEndpointCertificate({
-        issuerCertificate: gatewayCertificate,
-        issuerPrivateKey: gatewayKeyPair.privateKey,
-        subjectPublicKey: privateNodeKeyPair.publicKey,
-        validityEndDate: tomorrow,
-      });
-
       expectedRegistration = new PrivateNodeRegistration(
-        privateNodeCertificate,
-        gatewayCertificate,
+        certificationPath.privateGateway.certificate,
+        certificationPath.publicGateway.certificate,
       );
       expectedRegistrationSerialized = expectedRegistration.serialize();
     });
@@ -310,4 +303,114 @@ describe('PoWebClient', () => {
       ).toBeTruthy();
     });
   });
+
+  describe('deliverParcel', () => {
+    const parcelSerialized = bufferToArray(Buffer.from('I am a "parcel"'));
+    let signer: Signer;
+    beforeAll(async () => {
+      signer = new Signer(
+        certificationPath.privateGateway.certificate,
+        certificationPath.privateGateway.privateKey,
+      );
+    });
+
+    let client: PoWebClient;
+    let mockAxios: MockAdapter;
+    beforeEach(() => {
+      client = PoWebClient.initLocal();
+      mockAxios = new MockAdapter(client.internalAxios);
+    });
+
+    test('Parcel should be POSTed to /v1/parcels', async () => {
+      mockAxios.onPost('/parcels').reply(200, null);
+
+      await client.deliverParcel(parcelSerialized, signer);
+
+      expect(mockAxios.history.post).toHaveLength(1);
+      expect(mockAxios.history.post[0].url).toEqual('/parcels');
+      expect(mockAxios.history.post[0].headers).toHaveProperty('Content-Type', PARCEL_CONTENT_TYPE);
+      expect(
+        Buffer.from(mockAxios.history.post[0].data).equals(Buffer.from(parcelSerialized)),
+      ).toBeTruthy();
+    });
+
+    test('Delivery should be signed with nonce signer', async () => {
+      mockAxios.onPost('/parcels').reply(200, null);
+
+      await client.deliverParcel(parcelSerialized, signer);
+
+      const authorizationHeaderValue = mockAxios.history.post[0].headers.authorization;
+      expect(authorizationHeaderValue).toBeDefined();
+      expect(authorizationHeaderValue).toStartWith('Relaynet-Countersignature ');
+      const [, countersignatureBase64] = authorizationHeaderValue.split(' ', 2);
+      const countersignature = Buffer.from(countersignatureBase64, 'base64');
+      await DETACHED_SIGNATURE_TYPES.PARCEL_DELIVERY.verify(
+        bufferToArray(countersignature),
+        parcelSerialized,
+        [certificationPath.publicGateway.certificate],
+      );
+    });
+
+    test('HTTP 20X should be regarded a successful delivery', async () => {
+      mockAxios.onPost('/parcels').reply(200, null);
+      await client.deliverParcel(parcelSerialized, signer);
+
+      mockAxios.onPost('/parcels').reply(299, null);
+      await client.deliverParcel(parcelSerialized, signer);
+    });
+
+    test('HTTP 403 should throw a RefusedParcelError', async () => {
+      mockAxios.onPost('/parcels').reply(403, null);
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toBeInstanceOf(RefusedParcelError);
+      expect(error.message).toEqual('Parcel was rejected');
+    });
+
+    test('RefusedParcelError should include rejection reason if available', async () => {
+      const message = 'Not enough postage';
+      mockAxios.onPost('/parcels').reply(403, { message });
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toBeInstanceOf(RefusedParcelError);
+      expect(error.message).toEqual(`Parcel was rejected: ${message}`);
+    });
+
+    test('HTTP 50X should throw a ServerError', async () => {
+      mockAxios.onPost('/parcels').reply(500, null);
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toBeInstanceOf(ServerError);
+      expect(error.message).toEqual('Server was unable to get parcel (HTTP 500)');
+    });
+
+    test('HTTP responses other than 20X/403/50X should throw errors', async () => {
+      mockAxios.onPost('/parcels').reply(400, null);
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toBeInstanceOf(ParcelDeliveryError);
+      expect(error.message).toEqual('Could not deliver parcel (HTTP 400)');
+    });
+
+    test('Other client exceptions should be propagated', async () => {
+      mockAxios.onPost('/parcels').networkError();
+
+      const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
+
+      expect(error).toHaveProperty('isAxiosError', true);
+    });
+  });
 });
+
+async function getRejection(promise: Promise<any>): Promise<Error> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+  throw new Error('Expected promise to reject');
+}

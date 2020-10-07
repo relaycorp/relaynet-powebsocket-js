@@ -1,9 +1,14 @@
-import { derSerializePublicKey, PrivateNodeRegistration } from '@relaycorp/relaynet-core';
+import {
+  derSerializePublicKey,
+  DETACHED_SIGNATURE_TYPES,
+  PrivateNodeRegistration,
+  Signer,
+} from '@relaycorp/relaynet-core';
 import axios, { AxiosInstance } from 'axios';
 import { createHash } from 'crypto';
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
-import { ServerError } from './errors';
+import { ParcelDeliveryError, RefusedParcelError, ServerError } from './errors';
 
 const DEFAULT_LOCAL_PORT = 276;
 const DEFAULT_REMOVE_PORT = 443;
@@ -16,6 +21,7 @@ const OCTETS_IN_ONE_MIB = 2 ** 20;
 export const PNRA_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.authorization';
 export const PNRR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.request';
 export const PNR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.registration';
+export const PARCEL_CONTENT_TYPE = 'application/vnd.relaynet.parcel';
 
 /**
  * PoWeb client.
@@ -78,7 +84,7 @@ export class PoWebClient {
       maxRedirects: 0,
       responseType: 'arraybuffer',
       timeout: timeoutMs,
-      validateStatus: null as any,
+      validateStatus: () => true,
     });
   }
 
@@ -125,6 +131,36 @@ export class PoWebClient {
     } catch (exc) {
       throw new ServerError(exc, 'Malformed registration received');
     }
+  }
+
+  /**
+   * Send a parcel to the gateway.
+   *
+   * @param parcelSerialized
+   * @param signer
+   */
+  public async deliverParcel(parcelSerialized: ArrayBuffer, signer: Signer): Promise<void> {
+    const signature = await signer.sign(parcelSerialized, DETACHED_SIGNATURE_TYPES.PARCEL_DELIVERY);
+    const countersignatureBase64 = Buffer.from(signature).toString('base64');
+    const authorizationHeaderValue = `Relaynet-Countersignature ${countersignatureBase64}`;
+    const response = await this.internalAxios.post('/parcels', parcelSerialized, {
+      headers: { authorization: authorizationHeaderValue, 'content-type': PARCEL_CONTENT_TYPE },
+    });
+
+    if (response.status < 300) {
+      return;
+    }
+
+    const errorMessage = response.data?.message;
+    if (response.status === 403) {
+      throw new RefusedParcelError(
+        errorMessage ? `Parcel was rejected: ${errorMessage}` : 'Parcel was rejected',
+      );
+    }
+    if (500 <= response.status) {
+      throw new ServerError(`Server was unable to get parcel (HTTP ${response.status})`);
+    }
+    throw new ParcelDeliveryError(`Could not deliver parcel (HTTP ${response.status})`);
   }
 }
 
