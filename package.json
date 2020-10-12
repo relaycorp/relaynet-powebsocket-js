@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@relaycorp/relaynet-testing": "^1.0.0",
-    "@relaycorp/shared-config": "^1.4.4",
+    "@relaycorp/shared-config": "^1.4.5",
     "@types/jest": "^26.0.14",
     "@types/verror": "^1.10.4",
     "axios-mock-adapter": "^1.18.2",
