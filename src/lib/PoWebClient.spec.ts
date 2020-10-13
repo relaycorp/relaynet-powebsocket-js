@@ -404,6 +404,42 @@ describe('PoWebClient', () => {
       expect(error).toHaveProperty('isAxiosError', true);
     });
   });
+
+  describe('collectParcels', () => {
+    test.todo('Request should be made to the parcel collection endpoint');
+
+    describe('Handshake', () => {
+      test.todo('Server closing connection during handshake should throw exception');
+
+      test.todo('Getting an invalid challenge should throw an exception');
+
+      test.todo('At least one nonce signer should be required');
+
+      test.todo('Challenge nonce should be signed with each signer');
+    });
+
+    test.todo('Call should return if server closed connection normally after the handshake');
+
+    test.todo('Exception should be thrown if server closes connection with error');
+
+    test.todo('Cancelling the flow should close the connection normally');
+
+    test.todo('Malformed deliveries should be refused');
+
+    describe('Streaming mode', () => {
+      test.todo('Streaming mode should be Keep-Alive by default');
+
+      test.todo('Streaming mode can be changed on request');
+    });
+
+    describe('Collector', () => {
+      test.todo("No collectors should be output if the server doesn't deliver anything");
+
+      test.todo('One collector should be output if there is one delivery');
+
+      test.todo('Multiple collectors should be output if there are multiple deliveries');
+    });
+  });
 });
 
 async function getRejection(promise: Promise<any>): Promise<Error> {
