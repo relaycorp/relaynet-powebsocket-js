@@ -4,10 +4,13 @@ import { VError } from 'verror';
 
 abstract class PoWebError extends VError {}
 
+export class ClientError extends PoWebError {}
 export class ServerError extends PoWebError {}
 
 export class ParcelDeliveryError extends PoWebError {}
 
 export class RefusedParcelError extends PoWebError {}
 
-export class InvalidHandshakeChallengeError extends PoWebError {}
+export class InvalidHandshakeChallengeError extends ServerError {}
+
+export class NonceSignerError extends ClientError {}

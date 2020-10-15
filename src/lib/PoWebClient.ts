@@ -17,6 +17,7 @@ import WebSocket from 'ws';
 
 import {
   InvalidHandshakeChallengeError,
+  NonceSignerError,
   ParcelDeliveryError,
   RefusedParcelError,
   ServerError,
@@ -186,6 +187,10 @@ export class PoWebClient {
     nonceSigners: readonly Signer[],
     _streamingMode: StreamingMode = StreamingMode.KEEP_ALIVE,
   ): AsyncIterable<ParcelCollection> {
+    if (nonceSigners.length === 0) {
+      throw new NonceSignerError('At least one nonce signer must be specified');
+    }
+
     const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
     const ws = new WebSocket(wsURL);
 

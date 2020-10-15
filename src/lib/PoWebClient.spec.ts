@@ -22,6 +22,7 @@ import WebSocket from 'ws';
 import { asyncIterableToArray, getPromiseRejection } from './_test_utils';
 import {
   InvalidHandshakeChallengeError,
+  NonceSignerError,
   ParcelDeliveryError,
   RefusedParcelError,
   ServerError,
@@ -455,7 +456,15 @@ describe('PoWebClient', () => {
       expect(WebSocket).toBeCalledWith(ENDPOINT_URL.toString());
     });
 
-    test.todo('At least one nonce signer should be required');
+    test('At least one nonce signer should be required', async () => {
+      const client = PoWebClient.initLocal();
+
+      const error = await getPromiseRejection(asyncIterableToArray(client.collectParcels([])));
+
+      expect(error).toBeInstanceOf(NonceSignerError);
+      expect(error.message).toEqual('At least one nonce signer must be specified');
+      expect(WebSocket).not.toBeCalled();
+    });
 
     describe('Handshake', () => {
       test('Server closing connection before handshake should throw error', async () => {
