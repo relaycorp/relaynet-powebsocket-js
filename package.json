@@ -40,7 +40,7 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@relaycorp/relaynet-core": "^1.38.1",
+    "@relaycorp/relaynet-core": "^1.39.0",
     "axios": "^0.20.0",
     "buffer-to-arraybuffer": "0.0.5",
     "verror": "^1.10.0",
@@ -49,7 +49,7 @@
   "devDependencies": {
     "@relaycorp/relaynet-testing": "^1.0.0",
     "@relaycorp/shared-config": "^1.4.5",
-    "@relaycorp/ws-mock": "^1.4.0",
+    "@relaycorp/ws-mock": "^1.4.1",
     "@types/jest": "^26.0.14",
     "@types/verror": "^1.10.4",
     "@types/ws": "^7.2.7",

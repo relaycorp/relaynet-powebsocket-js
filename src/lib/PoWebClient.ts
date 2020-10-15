@@ -3,7 +3,9 @@ import {
   DETACHED_SIGNATURE_TYPES,
   HandshakeChallenge,
   HandshakeResponse,
+  MAX_RAMF_MESSAGE_LENGTH,
   ParcelCollection,
+  ParcelDelivery,
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
@@ -192,11 +194,19 @@ export class PoWebClient {
     }
 
     const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
-    const ws = new WebSocket(wsURL);
+    const ws = new WebSocket(wsURL, { maxPayload: MAX_RAMF_MESSAGE_LENGTH });
 
     let handshakeComplete = false;
     await new Promise((resolve, reject) => {
-      ws.on('close', () => {
+      ws.on('close', (code, reason) => {
+        if (code !== WebSocketCode.NORMAL) {
+          reject(
+            new ServerError(
+              `Server closed connection unexpectedly (code: ${code}, reason: ${reason})`,
+            ),
+          );
+          return;
+        }
         if (handshakeComplete) {
           resolve();
         } else {
@@ -229,6 +239,19 @@ export class PoWebClient {
         const response = new HandshakeResponse(nonceSignatures);
         ws.send(Buffer.from(response.serialize()));
         handshakeComplete = true;
+      });
+
+      ws.once('message', () => {
+        ws.on('message', async (message) => {
+          try {
+            ParcelDelivery.deserialize(bufferToArray(message as Buffer));
+          } catch (error) {
+            ws.close(WebSocketCode.VIOLATED_POLICY, 'Malformed parcel delivery');
+            reject(
+              new ParcelDeliveryError(error, 'Received malformed parcel delivery from the server'),
+            );
+          }
+        });
       });
     });
   }

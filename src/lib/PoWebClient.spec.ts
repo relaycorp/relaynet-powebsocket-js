@@ -3,6 +3,7 @@ import {
   DETACHED_SIGNATURE_TYPES,
   HandshakeChallenge,
   HandshakeResponse,
+  MAX_RAMF_MESSAGE_LENGTH,
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
@@ -10,6 +11,7 @@ import { CertificationPath, generateCertificationPath } from '@relaycorp/relayne
 import {
   AcceptConnectionAction,
   CloseConnectionAction,
+  CloseFrame,
   MockServer,
   ReceiveMessageAction,
   SendMessageAction,
@@ -443,7 +445,19 @@ describe('PoWebClient', () => {
       nonceSigner = new Signer(subject.certificate, subject.privateKey);
     });
 
-    test.todo('Maximum incoming payload size should be enough for large parcels');
+    test('Maximum incoming payload size should be enough for large parcels', async () => {
+      const client = PoWebClient.initLocal();
+
+      await Promise.all([
+        asyncIterableToArray(client.collectParcels([nonceSigner])).catch(() => undefined),
+        mockServer.runActions(new CloseConnectionAction()),
+      ]);
+
+      expect(WebSocket).toBeCalledWith(
+        expect.anything(),
+        expect.objectContaining({ maxPayload: MAX_RAMF_MESSAGE_LENGTH }),
+      );
+    });
 
     test('Request should be made to the parcel collection endpoint', async () => {
       const client = PoWebClient.initLocal();
@@ -453,7 +467,7 @@ describe('PoWebClient', () => {
         mockServer.runActions(new CloseConnectionAction()),
       ]);
 
-      expect(WebSocket).toBeCalledWith(ENDPOINT_URL.toString());
+      expect(WebSocket).toBeCalledWith(ENDPOINT_URL.toString(), expect.anything());
     });
 
     test('At least one nonce signer should be required', async () => {
@@ -553,11 +567,53 @@ describe('PoWebClient', () => {
       expect(collectedParcels).toHaveLength(0);
     });
 
-    test.todo('Exception should be thrown if server closes connection with error');
+    test('Error should be thrown if server closes connection with error code', async () => {
+      const client = PoWebClient.initLocal();
+      const closeReason = 'Just because';
+
+      const sessionPromise = Promise.all([
+        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        mockServer.runActions(
+          new AcceptConnectionAction(),
+          new SendHandshakeChallengeAction(NONCE),
+          new ReceiveMessageAction(),
+          new CloseConnectionAction(WebSocketCode.VIOLATED_POLICY, closeReason),
+        ),
+      ]);
+
+      const error = await getPromiseRejection(sessionPromise);
+      expect(error).toBeInstanceOf(ServerError);
+      expect(error.message).toEqual(
+        'Server closed connection unexpectedly ' +
+          `(code: ${WebSocketCode.VIOLATED_POLICY}, reason: ${closeReason})`,
+      );
+    });
+
+    test('Malformed deliveries should be refused', async () => {
+      const client = PoWebClient.initLocal();
+
+      const sessionPromise = Promise.all([
+        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        mockServer.runActions(
+          new AcceptConnectionAction(),
+          new SendHandshakeChallengeAction(NONCE),
+          new ReceiveMessageAction(),
+          new SendMessageAction(Buffer.from('this is not a valid parcel delivery')),
+        ),
+      ]);
+
+      const error = await getPromiseRejection(sessionPromise);
+      expect(error).toBeInstanceOf(ParcelDeliveryError);
+      expect(error.message).toStartWith('Received malformed parcel delivery from the server');
+      expect((error as ParcelDeliveryError).cause()).toBeTruthy();
+
+      expect(mockServer.peerCloseFrame).toEqual<CloseFrame>({
+        code: WebSocketCode.VIOLATED_POLICY,
+        reason: 'Malformed parcel delivery',
+      });
+    });
 
     test.todo('Breaking out of the iterable should close the connection normally');
-
-    test.todo('Malformed deliveries should be refused');
 
     describe('Streaming mode', () => {
       test.todo('Streaming mode should be Keep-Alive by default');
