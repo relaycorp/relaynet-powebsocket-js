@@ -188,13 +188,19 @@ export class PoWebClient {
   ): AsyncIterable<ParcelCollection> {
     const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
     const ws = new WebSocket(wsURL);
+
+    let handshakeComplete = false;
     await new Promise((resolve, reject) => {
       ws.on('close', () => {
-        reject(
-          new InvalidHandshakeChallengeError(
-            'Server closed the connection before/during the handshake',
-          ),
-        );
+        if (handshakeComplete) {
+          resolve();
+        } else {
+          reject(
+            new InvalidHandshakeChallengeError(
+              'Server closed the connection before/during the handshake',
+            ),
+          );
+        }
       });
 
       ws.once('message', async (message) => {
@@ -209,6 +215,7 @@ export class PoWebClient {
               'Server sent a malformed handshake challenge',
             ),
           );
+          return;
         }
 
         const nonceSignatures = await Promise.all(
@@ -216,7 +223,7 @@ export class PoWebClient {
         );
         const response = new HandshakeResponse(nonceSignatures);
         ws.send(Buffer.from(response.serialize()));
-        resolve();
+        handshakeComplete = true;
       });
     });
   }

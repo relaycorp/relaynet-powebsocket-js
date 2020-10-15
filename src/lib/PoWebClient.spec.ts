@@ -11,11 +11,13 @@ import {
   AcceptConnectionAction,
   CloseConnectionAction,
   MockServer,
+  ReceiveMessageAction,
   SendMessageAction,
 } from '@relaycorp/ws-mock';
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
+import WebSocket from 'ws';
 
 import { asyncIterableToArray, getPromiseRejection } from './_test_utils';
 import {
@@ -24,6 +26,14 @@ import {
   RefusedParcelError,
   ServerError,
 } from './errors';
+import {
+  PARCEL_CONTENT_TYPE,
+  PNR_CONTENT_TYPE,
+  PNRA_CONTENT_TYPE,
+  PNRR_CONTENT_TYPE,
+  PoWebClient,
+} from './PoWebClient';
+import { WebSocketCode } from './WebSocketCode';
 
 let mockServer: MockServer;
 beforeEach(() => {
@@ -33,15 +43,6 @@ jest.mock('ws', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => mockServer.mockClientWebSocket),
 }));
-import WebSocket from 'ws';
-import {
-  PARCEL_CONTENT_TYPE,
-  PNR_CONTENT_TYPE,
-  PNRA_CONTENT_TYPE,
-  PNRR_CONTENT_TYPE,
-  PoWebClient,
-} from './PoWebClient';
-import { WebSocketCode } from './WebSocketCode';
 
 let certificationPath: CertificationPath;
 beforeAll(async () => {
@@ -503,18 +504,22 @@ describe('PoWebClient', () => {
 
       test('Challenge nonce should be signed with each signer', async () => {
         const client = PoWebClient.initLocal();
+        const receiveResponseAction = new ReceiveMessageAction();
 
         await Promise.all([
           asyncIterableToArray(client.collectParcels([nonceSigner])),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
+            receiveResponseAction,
+            new CloseConnectionAction(),
           ),
         ]);
 
-        const responseSerialized = mockServer.popLastPeerMessage();
-        expect(responseSerialized).toBeInstanceOf(Buffer);
-        const response = HandshakeResponse.deserialize(bufferToArray(responseSerialized as Buffer));
+        expect(receiveResponseAction.message).toBeInstanceOf(Buffer);
+        const response = HandshakeResponse.deserialize(
+          bufferToArray(receiveResponseAction.message as Buffer),
+        );
         expect(response.nonceSignatures).toHaveLength(1);
 
         await DETACHED_SIGNATURE_TYPES.NONCE.verify(response.nonceSignatures[0], NONCE, [
@@ -523,11 +528,25 @@ describe('PoWebClient', () => {
       });
     });
 
-    test.todo('Call should return if server closed connection normally after the handshake');
+    test('Call should return if server closed connection normally after the handshake', async () => {
+      const client = PoWebClient.initLocal();
+
+      const [collectedParcels] = await Promise.all([
+        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        mockServer.runActions(
+          new AcceptConnectionAction(),
+          new SendHandshakeChallengeAction(NONCE),
+          new ReceiveMessageAction(),
+          new CloseConnectionAction(),
+        ),
+      ]);
+
+      expect(collectedParcels).toHaveLength(0);
+    });
 
     test.todo('Exception should be thrown if server closes connection with error');
 
-    test.todo('Cancelling the flow should close the connection normally');
+    test.todo('Breaking out of the iterable should close the connection normally');
 
     test.todo('Malformed deliveries should be refused');
 
