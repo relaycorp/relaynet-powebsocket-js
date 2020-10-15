@@ -1,14 +1,28 @@
 import {
   derSerializePublicKey,
   DETACHED_SIGNATURE_TYPES,
+  HandshakeChallenge,
+  HandshakeResponse,
+  ParcelCollection,
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
 import axios, { AxiosInstance } from 'axios';
+import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
-import { ParcelDeliveryError, RefusedParcelError, ServerError } from './errors';
+import { resolve as resolveURL } from 'url';
+import WebSocket from 'ws';
+
+import {
+  InvalidHandshakeChallengeError,
+  ParcelDeliveryError,
+  RefusedParcelError,
+  ServerError,
+} from './errors';
+import { StreamingMode } from './StreamingMode';
+import { WebSocketCode } from './WebSocketCode';
 
 const DEFAULT_LOCAL_PORT = 276;
 const DEFAULT_REMOVE_PORT = 443;
@@ -68,6 +82,8 @@ export class PoWebClient {
    */
   public readonly internalAxios: AxiosInstance;
 
+  private readonly wsBaseURL: string;
+
   protected constructor(
     public readonly hostName: string,
     public readonly port: number,
@@ -86,6 +102,9 @@ export class PoWebClient {
       timeout: timeoutMs,
       validateStatus: () => true,
     });
+
+    const wsSchema = useTLS ? 'wss' : 'ws';
+    this.wsBaseURL = `${wsSchema}://${hostName}:${port}/v1/`;
   }
 
   /**
@@ -161,6 +180,45 @@ export class PoWebClient {
       throw new ServerError(`Server was unable to get parcel (HTTP ${response.status})`);
     }
     throw new ParcelDeliveryError(`Could not deliver parcel (HTTP ${response.status})`);
+  }
+
+  public async *collectParcels(
+    nonceSigners: readonly Signer[],
+    _streamingMode: StreamingMode = StreamingMode.KEEP_ALIVE,
+  ): AsyncIterable<ParcelCollection> {
+    const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
+    const ws = new WebSocket(wsURL);
+    await new Promise((resolve, reject) => {
+      ws.on('close', () => {
+        reject(
+          new InvalidHandshakeChallengeError(
+            'Server closed the connection before/during the handshake',
+          ),
+        );
+      });
+
+      ws.once('message', async (message) => {
+        let challenge: HandshakeChallenge;
+        try {
+          challenge = HandshakeChallenge.deserialize(bufferToArray(message));
+        } catch (error) {
+          ws.close(WebSocketCode.VIOLATED_POLICY, 'Malformed handshake challenge');
+          reject(
+            new InvalidHandshakeChallengeError(
+              error,
+              'Server sent a malformed handshake challenge',
+            ),
+          );
+        }
+
+        const nonceSignatures = await Promise.all(
+          nonceSigners.map((s) => s.sign(challenge.nonce, DETACHED_SIGNATURE_TYPES.NONCE)),
+        );
+        const response = new HandshakeResponse(nonceSignatures);
+        ws.send(Buffer.from(response.serialize()));
+        resolve();
+      });
+    });
   }
 }
 

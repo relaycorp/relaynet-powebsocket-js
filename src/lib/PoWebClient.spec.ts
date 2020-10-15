@@ -1,15 +1,39 @@
 import {
   derSerializePublicKey,
   DETACHED_SIGNATURE_TYPES,
+  HandshakeChallenge,
+  HandshakeResponse,
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
 import { CertificationPath, generateCertificationPath } from '@relaycorp/relaynet-testing';
+import {
+  AcceptConnectionAction,
+  CloseConnectionAction,
+  MockServer,
+  SendMessageAction,
+} from '@relaycorp/ws-mock';
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 
-import { ParcelDeliveryError, RefusedParcelError, ServerError } from './errors';
+import { asyncIterableToArray, getPromiseRejection } from './_test_utils';
+import {
+  InvalidHandshakeChallengeError,
+  ParcelDeliveryError,
+  RefusedParcelError,
+  ServerError,
+} from './errors';
+
+let mockServer: MockServer;
+beforeEach(() => {
+  mockServer = new MockServer();
+});
+jest.mock('ws', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => mockServer.mockClientWebSocket),
+}));
+import WebSocket from 'ws';
 import {
   PARCEL_CONTENT_TYPE,
   PNR_CONTENT_TYPE,
@@ -17,6 +41,7 @@ import {
   PNRR_CONTENT_TYPE,
   PoWebClient,
 } from './PoWebClient';
+import { WebSocketCode } from './WebSocketCode';
 
 let certificationPath: CertificationPath;
 beforeAll(async () => {
@@ -406,16 +431,96 @@ describe('PoWebClient', () => {
   });
 
   describe('collectParcels', () => {
-    test.todo('Request should be made to the parcel collection endpoint');
+    const ENDPOINT_URL = new URL('ws://127.0.0.1:276/v1/parcel-collection');
+
+    const NONCE = bufferToArray(Buffer.from('the-nonce'));
+
+    let nonceSigner: Signer;
+    beforeAll(async () => {
+      const subject = certificationPath.privateEndpoint;
+      nonceSigner = new Signer(subject.certificate, subject.privateKey);
+    });
+
+    test.todo('Maximum incoming payload size should be enough for large parcels');
+
+    test('Request should be made to the parcel collection endpoint', async () => {
+      const client = PoWebClient.initLocal();
+
+      await Promise.all([
+        asyncIterableToArray(client.collectParcels([nonceSigner])).catch(() => undefined),
+        mockServer.runActions(new CloseConnectionAction()),
+      ]);
+
+      expect(WebSocket).toBeCalledWith(ENDPOINT_URL.toString());
+    });
+
+    test.todo('At least one nonce signer should be required');
 
     describe('Handshake', () => {
-      test.todo('Server closing connection during handshake should throw exception');
+      test('Server closing connection before handshake should throw error', async () => {
+        const client = PoWebClient.initLocal();
 
-      test.todo('Getting an invalid challenge should throw an exception');
+        const sessionPromise = Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(new CloseConnectionAction()),
+        ]);
 
-      test.todo('At least one nonce signer should be required');
+        const error = await getPromiseRejection(sessionPromise);
+        expect(error).toBeInstanceOf(InvalidHandshakeChallengeError);
+        expect(error.message).toEqual('Server closed the connection before/during the handshake');
+      });
 
-      test.todo('Challenge nonce should be signed with each signer');
+      test('Server closing connection during handshake should throw error', async () => {
+        const client = PoWebClient.initLocal();
+
+        const sessionPromise = Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(new AcceptConnectionAction(), new CloseConnectionAction()),
+        ]);
+
+        const error = await getPromiseRejection(sessionPromise);
+        expect(error).toBeInstanceOf(InvalidHandshakeChallengeError);
+        expect(error.message).toEqual('Server closed the connection before/during the handshake');
+      });
+
+      test('Getting a malformed challenge should throw an error', async () => {
+        const client = PoWebClient.initLocal();
+
+        const sessionPromise = Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(new AcceptConnectionAction(), new SendMessageAction('malformed')),
+        ]);
+
+        const error = await getPromiseRejection(sessionPromise);
+        expect(error).toBeInstanceOf(InvalidHandshakeChallengeError);
+        expect(error.message).toStartWith('Server sent a malformed handshake challenge:');
+        expect((error as InvalidHandshakeChallengeError).cause()).toBeTruthy();
+
+        expect(mockServer.wasConnectionClosed).toBeTrue();
+        expect(mockServer.peerCloseFrame?.code).toEqual(WebSocketCode.VIOLATED_POLICY);
+        expect(mockServer.peerCloseFrame?.reason).toEqual('Malformed handshake challenge');
+      });
+
+      test('Challenge nonce should be signed with each signer', async () => {
+        const client = PoWebClient.initLocal();
+
+        await Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(
+            new AcceptConnectionAction(),
+            new SendHandshakeChallengeAction(NONCE),
+          ),
+        ]);
+
+        const responseSerialized = mockServer.popLastPeerMessage();
+        expect(responseSerialized).toBeInstanceOf(Buffer);
+        const response = HandshakeResponse.deserialize(bufferToArray(responseSerialized as Buffer));
+        expect(response.nonceSignatures).toHaveLength(1);
+
+        await DETACHED_SIGNATURE_TYPES.NONCE.verify(response.nonceSignatures[0], NONCE, [
+          certificationPath.privateGateway.certificate,
+        ]);
+      });
     });
 
     test.todo('Call should return if server closed connection normally after the handshake');
@@ -449,4 +554,11 @@ async function getRejection(promise: Promise<any>): Promise<Error> {
     return error;
   }
   throw new Error('Expected promise to reject');
+}
+
+class SendHandshakeChallengeAction extends SendMessageAction {
+  constructor(nonce: ArrayBuffer) {
+    const challenge = new HandshakeChallenge(nonce);
+    super(challenge.serialize());
+  }
 }
