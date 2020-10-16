@@ -21,7 +21,7 @@ import {
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
-import WebSocket from 'ws';
+import WebSocket, { ClientOptions } from 'ws';
 
 import { asyncIterableToArray, getPromiseRejection, iterableTake } from './_test_utils';
 import { WebSocketCode } from './_websocketUtils';
@@ -39,6 +39,7 @@ import {
   PNRR_CONTENT_TYPE,
   PoWebClient,
 } from './PoWebClient';
+import { StreamingMode } from './StreamingMode';
 
 let mockServer: MockServer;
 beforeEach(() => {
@@ -638,9 +639,35 @@ describe('PoWebClient', () => {
     });
 
     describe('Streaming mode', () => {
-      test.todo('Streaming mode should be Keep-Alive by default');
+      test('Streaming mode should be Keep-Alive by default', async () => {
+        const client = PoWebClient.initLocal();
 
-      test.todo('Streaming mode can be changed on request');
+        await Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])).catch(() => undefined),
+          mockServer.runActions(new CloseConnectionAction()),
+        ]);
+
+        expect(WebSocket).toBeCalledWith(
+          expect.anything(),
+          expect.objectContaining<ClientOptions>({ headers: { 'X-Relaynet-Keep-Alive': 'on' } }),
+        );
+      });
+
+      test('Streaming mode can be changed on request', async () => {
+        const client = PoWebClient.initLocal();
+
+        await Promise.all([
+          asyncIterableToArray(
+            client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+          ).catch(() => undefined),
+          mockServer.runActions(new CloseConnectionAction()),
+        ]);
+
+        expect(WebSocket).toBeCalledWith(
+          expect.anything(),
+          expect.objectContaining<ClientOptions>({ headers: { 'X-Relaynet-Keep-Alive': 'off' } }),
+        );
+      });
     });
 
     describe('Collector', () => {

@@ -190,14 +190,18 @@ export class PoWebClient {
 
   public async *collectParcels(
     nonceSigners: readonly Signer[],
-    _streamingMode: StreamingMode = StreamingMode.KEEP_ALIVE,
+    streamingMode: StreamingMode = StreamingMode.KEEP_ALIVE,
   ): AsyncIterable<ParcelCollection> {
     if (nonceSigners.length === 0) {
       throw new NonceSignerError('At least one nonce signer must be specified');
     }
 
     const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
-    const ws = new WebSocket(wsURL, { maxPayload: MAX_RAMF_MESSAGE_LENGTH });
+    const keepAliveHeader = streamingMode === StreamingMode.KEEP_ALIVE ? 'on' : 'off';
+    const ws = new WebSocket(wsURL, {
+      headers: { 'X-Relaynet-Keep-Alive': keepAliveHeader },
+      maxPayload: MAX_RAMF_MESSAGE_LENGTH,
+    });
 
     const stateManager = new WebSocketStateManager();
     ws.on('close', (code, reason) => {
