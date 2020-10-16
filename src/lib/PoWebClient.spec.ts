@@ -21,7 +21,6 @@ import {
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
-import WebSocket, { ClientOptions } from 'ws';
 
 import { asyncIterableToArray, getPromiseRejection, iterableTake } from './_test_utils';
 import { WebSocketCode } from './_websocketUtils';
@@ -32,6 +31,19 @@ import {
   RefusedParcelError,
   ServerError,
 } from './errors';
+import { StreamingMode } from './StreamingMode';
+
+let mockServer: MockServer;
+beforeEach(() => {
+  mockServer = new MockServer();
+});
+const mockCreateWebSocketStream = createMockWebSocketStream;
+jest.mock('ws', () => ({
+  __esModule: true,
+  createWebSocketStream: mockCreateWebSocketStream,
+  default: jest.fn().mockImplementation(() => mockServer.mockClientWebSocket),
+}));
+import WebSocket, { ClientOptions } from 'ws';
 import {
   PARCEL_CONTENT_TYPE,
   PNR_CONTENT_TYPE,
@@ -39,17 +51,6 @@ import {
   PNRR_CONTENT_TYPE,
   PoWebClient,
 } from './PoWebClient';
-import { StreamingMode } from './StreamingMode';
-
-let mockServer: MockServer;
-beforeEach(() => {
-  mockServer = new MockServer();
-});
-jest.mock('ws', () => ({
-  __esModule: true,
-  createWebSocketStream: createMockWebSocketStream,
-  default: jest.fn().mockImplementation(() => mockServer.mockClientWebSocket),
-}));
 
 let certificationPath: CertificationPath;
 beforeAll(async () => {

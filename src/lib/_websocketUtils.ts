@@ -51,7 +51,7 @@ export class WebSocketStateManager {
   }
 
   public throwConnectionErrorIfAny(): void {
-    if (this.serverCloseFrame && this.serverCloseFrame?.code !== WebSocketCode.NORMAL) {
+    if (this.serverCloseFrame && this.serverCloseFrame.code !== WebSocketCode.NORMAL) {
       throw new ServerError(
         'Server closed connection unexpectedly ' +
           `(code: ${this.serverCloseFrame.code}, reason: ${this.serverCloseFrame.reason})`,
