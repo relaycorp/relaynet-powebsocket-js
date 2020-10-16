@@ -9,7 +9,6 @@ import {
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
-import { source as makeSourceAbortable } from 'abortable-iterator';
 import axios, { AxiosInstance } from 'axios';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
@@ -216,11 +215,7 @@ export class PoWebClient {
 
     await this.doHandshake(ws, nonceSigners);
 
-    const incomingDeliveries = makeSourceAbortable(
-      source(createWebSocketStream(ws)),
-      stateManager.serverConnectionClosureSignal,
-      { returnOnAbort: true },
-    );
+    const incomingDeliveries = source(createWebSocketStream(ws));
 
     async function* parseParcelDeliveries(
       parcelDeliveriesSerialized: AsyncIterable<Buffer>,

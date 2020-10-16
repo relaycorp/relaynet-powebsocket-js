@@ -1,4 +1,3 @@
-import AbortController from 'abort-controller';
 import { ServerError } from './errors';
 
 export enum WebSocketCode {
@@ -13,8 +12,6 @@ interface CloseFrame {
 }
 
 export class WebSocketStateManager {
-  protected readonly serverConnectionClosure = new AbortController();
-
   // tslint:disable-next-line:readonly-keyword
   protected serverCloseFrame: CloseFrame | undefined;
 
@@ -23,10 +20,6 @@ export class WebSocketStateManager {
 
   // tslint:disable-next-line:readonly-keyword
   protected clientError: Error | undefined;
-
-  get serverConnectionClosureSignal(): AbortSignal {
-    return this.serverConnectionClosure.signal;
-  }
 
   get hasServerClosedConnection(): boolean {
     return !!this.serverCloseFrame;
@@ -37,8 +30,6 @@ export class WebSocketStateManager {
   }
 
   public registerServerClosure(code: number, reason?: string): void {
-    this.serverConnectionClosure.abort();
-
     // tslint:disable-next-line:no-object-mutation
     this.serverCloseFrame = { code, reason };
   }
