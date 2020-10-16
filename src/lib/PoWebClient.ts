@@ -9,14 +9,18 @@ import {
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
+import { source as makeSourceAbortable } from 'abortable-iterator';
 import axios, { AxiosInstance } from 'axios';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
+import pipe from 'it-pipe';
+import { source } from 'stream-to-it';
 import { resolve as resolveURL } from 'url';
-import WebSocket from 'ws';
+import WebSocket, { createWebSocketStream } from 'ws';
 
+import { WebSocketCode, WebSocketStateManager } from './_websocketUtils';
 import {
   InvalidHandshakeChallengeError,
   NonceSignerError,
@@ -25,7 +29,6 @@ import {
   ServerError,
 } from './errors';
 import { StreamingMode } from './StreamingMode';
-import { WebSocketCode } from './WebSocketCode';
 
 const DEFAULT_LOCAL_PORT = 276;
 const DEFAULT_REMOVE_PORT = 443;
@@ -196,27 +199,56 @@ export class PoWebClient {
     const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
     const ws = new WebSocket(wsURL, { maxPayload: MAX_RAMF_MESSAGE_LENGTH });
 
-    let handshakeComplete = false;
-    await new Promise((resolve, reject) => {
-      ws.on('close', (code, reason) => {
-        if (code !== WebSocketCode.NORMAL) {
-          reject(
-            new ServerError(
-              `Server closed connection unexpectedly (code: ${code}, reason: ${reason})`,
-            ),
+    const stateManager = new WebSocketStateManager();
+    ws.on('close', (code, reason) => {
+      stateManager.registerServerClosure(code, reason);
+    });
+
+    await this.doHandshake(ws, nonceSigners);
+
+    const incomingDeliveries = makeSourceAbortable(
+      source(createWebSocketStream(ws)),
+      stateManager.serverConnectionClosureSignal,
+      { returnOnAbort: true },
+    );
+
+    async function* parseParcelDeliveries(
+      parcelDeliveriesSerialized: AsyncIterable<Buffer>,
+    ): AsyncIterable<ParcelDelivery> {
+      for await (const parcelDeliverySerialized of parcelDeliveriesSerialized) {
+        try {
+          yield ParcelDelivery.deserialize(bufferToArray(parcelDeliverySerialized));
+        } catch (error) {
+          stateManager.registerServerProtocolViolation(
+            new ParcelDeliveryError(error, 'Received malformed parcel delivery from the server'),
+            { code: WebSocketCode.CANNOT_ACCEPT, reason: 'Malformed parcel delivery' },
           );
-          return;
+          break;
         }
-        if (handshakeComplete) {
-          resolve();
-        } else {
-          reject(
-            new InvalidHandshakeChallengeError(
-              'Server closed the connection before/during the handshake',
-            ),
-          );
-        }
-      });
+      }
+    }
+
+    try {
+      yield* await pipe(incomingDeliveries, parseParcelDeliveries);
+    } finally {
+      if (!stateManager.hasServerClosedConnection) {
+        ws.close(stateManager.clientCloseFrame.code, stateManager.clientCloseFrame.reason);
+      }
+
+      stateManager.throwConnectionErrorIfAny();
+    }
+  }
+
+  private async doHandshake(ws: WebSocket, nonceSigners: readonly Signer[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      function rejectPrematureClose(): void {
+        reject(
+          new InvalidHandshakeChallengeError(
+            'Server closed the connection before/during the handshake',
+          ),
+        );
+      }
+      ws.once('close', rejectPrematureClose);
 
       ws.once('message', async (message) => {
         let challenge: HandshakeChallenge;
@@ -238,20 +270,9 @@ export class PoWebClient {
         );
         const response = new HandshakeResponse(nonceSignatures);
         ws.send(Buffer.from(response.serialize()));
-        handshakeComplete = true;
-      });
 
-      ws.once('message', () => {
-        ws.on('message', async (message) => {
-          try {
-            ParcelDelivery.deserialize(bufferToArray(message as Buffer));
-          } catch (error) {
-            ws.close(WebSocketCode.VIOLATED_POLICY, 'Malformed parcel delivery');
-            reject(
-              new ParcelDeliveryError(error, 'Received malformed parcel delivery from the server'),
-            );
-          }
-        });
+        resolve();
+        ws.removeListener('close', rejectPrematureClose);
       });
     });
   }

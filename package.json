@@ -41,15 +41,19 @@
   },
   "dependencies": {
     "@relaycorp/relaynet-core": "^1.39.0",
+    "abort-controller": "^3.0.0",
+    "abortable-iterator": "^3.0.0",
     "axios": "^0.20.0",
     "buffer-to-arraybuffer": "0.0.5",
+    "it-pipe": "^1.1.0",
+    "stream-to-it": "^0.2.2",
     "verror": "^1.10.0",
     "ws": "^7.3.1"
   },
   "devDependencies": {
     "@relaycorp/relaynet-testing": "^1.0.0",
     "@relaycorp/shared-config": "^1.4.5",
-    "@relaycorp/ws-mock": "^1.4.1",
+    "@relaycorp/ws-mock": "^1.4.3",
     "@types/jest": "^26.0.14",
     "@types/verror": "^1.10.4",
     "@types/ws": "^7.2.7",

@@ -4,6 +4,7 @@ import {
   HandshakeChallenge,
   HandshakeResponse,
   MAX_RAMF_MESSAGE_LENGTH,
+  ParcelDelivery,
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
@@ -12,6 +13,7 @@ import {
   AcceptConnectionAction,
   CloseConnectionAction,
   CloseFrame,
+  createMockWebSocketStream,
   MockServer,
   ReceiveMessageAction,
   SendMessageAction,
@@ -21,7 +23,8 @@ import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 import WebSocket from 'ws';
 
-import { asyncIterableToArray, getPromiseRejection } from './_test_utils';
+import { asyncIterableToArray, getPromiseRejection, iterableTake } from './_test_utils';
+import { WebSocketCode } from './_websocketUtils';
 import {
   InvalidHandshakeChallengeError,
   NonceSignerError,
@@ -36,7 +39,6 @@ import {
   PNRR_CONTENT_TYPE,
   PoWebClient,
 } from './PoWebClient';
-import { WebSocketCode } from './WebSocketCode';
 
 let mockServer: MockServer;
 beforeEach(() => {
@@ -44,6 +46,7 @@ beforeEach(() => {
 });
 jest.mock('ws', () => ({
   __esModule: true,
+  createWebSocketStream: createMockWebSocketStream,
   default: jest.fn().mockImplementation(() => mockServer.mockClientWebSocket),
 }));
 
@@ -608,12 +611,31 @@ describe('PoWebClient', () => {
       expect((error as ParcelDeliveryError).cause()).toBeTruthy();
 
       expect(mockServer.peerCloseFrame).toEqual<CloseFrame>({
-        code: WebSocketCode.VIOLATED_POLICY,
+        code: WebSocketCode.CANNOT_ACCEPT,
         reason: 'Malformed parcel delivery',
       });
     });
 
-    test.todo('Breaking out of the iterable should close the connection normally');
+    test('Breaking out of the iterable should close the connection normally', async () => {
+      const client = PoWebClient.initLocal();
+
+      const [collectedParcels] = await Promise.all([
+        asyncIterableToArray(iterableTake(client.collectParcels([nonceSigner]), 1)),
+        mockServer.runActions(
+          new AcceptConnectionAction(),
+          new SendHandshakeChallengeAction(NONCE),
+          new ReceiveMessageAction(), // Handshake response
+          new SendMessageAction(new ParcelDelivery('id1', new ArrayBuffer(0)).serialize()),
+          new SendMessageAction(new ParcelDelivery('id2', new ArrayBuffer(0)).serialize()),
+        ),
+      ]);
+
+      await expect(collectedParcels).toHaveLength(1);
+
+      await expect(mockServer.waitForPeerClosure()).resolves.toEqual<CloseFrame>({
+        code: WebSocketCode.NORMAL,
+      });
+    });
 
     describe('Streaming mode', () => {
       test.todo('Streaming mode should be Keep-Alive by default');
@@ -627,6 +649,8 @@ describe('PoWebClient', () => {
       test.todo('One collector should be output if there is one delivery');
 
       test.todo('Multiple collectors should be output if there are multiple deliveries');
+
+      test.todo('Acknowledging the collector should send an ACK to the server');
     });
   });
 });

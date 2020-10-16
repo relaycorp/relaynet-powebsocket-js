@@ -17,3 +17,18 @@ export async function asyncIterableToArray<T>(iterable: AsyncIterable<T>): Promi
   }
   return values;
 }
+
+export async function* iterableTake<T>(iterable: AsyncIterable<T>, max: number): AsyncIterable<T> {
+  if (max <= 0) {
+    return;
+  }
+
+  let count = 0;
+  for await (const item of iterable) {
+    yield item;
+    count++;
+    if (max === count) {
+      break;
+    }
+  }
+}
