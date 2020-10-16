@@ -232,8 +232,19 @@ export class PoWebClient {
       }
     }
 
+    async function* convertDeliveriesToCollections(
+      deliveries: AsyncIterable<ParcelDelivery>,
+    ): AsyncIterable<ParcelCollection> {
+      const trustedCertificates = nonceSigners.map((s) => s.certificate);
+      for await (const delivery of deliveries) {
+        yield new ParcelCollection(delivery.parcelSerialized, trustedCertificates, async () =>
+          ws.send(delivery.deliveryId),
+        );
+      }
+    }
+
     try {
-      yield* await pipe(incomingDeliveries, parseParcelDeliveries);
+      yield* await pipe(incomingDeliveries, parseParcelDeliveries, convertDeliveriesToCollections);
     } finally {
       if (!stateManager.hasServerClosedConnection) {
         ws.close(stateManager.clientCloseFrame.code, stateManager.clientCloseFrame.reason);
@@ -259,7 +270,7 @@ export class PoWebClient {
         try {
           challenge = HandshakeChallenge.deserialize(bufferToArray(message));
         } catch (error) {
-          ws.close(WebSocketCode.VIOLATED_POLICY, 'Malformed handshake challenge');
+          ws.close(WebSocketCode.CANNOT_ACCEPT, 'Malformed handshake challenge');
           reject(
             new InvalidHandshakeChallengeError(
               error,

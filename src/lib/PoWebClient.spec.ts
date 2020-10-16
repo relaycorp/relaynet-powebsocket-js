@@ -1,9 +1,14 @@
+// tslint:disable:max-classes-per-file
+
 import {
   derSerializePublicKey,
   DETACHED_SIGNATURE_TYPES,
+  generateRSAKeyPair,
   HandshakeChallenge,
   HandshakeResponse,
+  issueEndpointCertificate,
   MAX_RAMF_MESSAGE_LENGTH,
+  ParcelCollection,
   ParcelDelivery,
   PrivateNodeRegistration,
   Signer,
@@ -21,8 +26,14 @@ import {
 import MockAdapter from 'axios-mock-adapter';
 import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
+import pipe from 'it-pipe';
 
-import { asyncIterableToArray, getPromiseRejection, iterableTake } from './_test_utils';
+import {
+  asyncIterableToArray,
+  expectArrayBuffersToEqual,
+  getPromiseRejection,
+  iterableTake,
+} from './_test_utils';
 import { WebSocketCode } from './_websocketUtils';
 import {
   InvalidHandshakeChallengeError,
@@ -526,7 +537,7 @@ describe('PoWebClient', () => {
         expect((error as InvalidHandshakeChallengeError).cause()).toBeTruthy();
 
         expect(mockServer.wasConnectionClosed).toBeTrue();
-        expect(mockServer.peerCloseFrame?.code).toEqual(WebSocketCode.VIOLATED_POLICY);
+        expect(mockServer.peerCloseFrame?.code).toEqual(WebSocketCode.CANNOT_ACCEPT);
         expect(mockServer.peerCloseFrame?.reason).toEqual('Malformed handshake challenge');
       });
 
@@ -559,7 +570,7 @@ describe('PoWebClient', () => {
     test('Call should return if server closed connection normally after the handshake', async () => {
       const client = PoWebClient.initLocal();
 
-      const [collectedParcels] = await Promise.all([
+      const [parcelCollections] = await Promise.all([
         asyncIterableToArray(client.collectParcels([nonceSigner])),
         mockServer.runActions(
           new AcceptConnectionAction(),
@@ -569,7 +580,7 @@ describe('PoWebClient', () => {
         ),
       ]);
 
-      expect(collectedParcels).toHaveLength(0);
+      expect(parcelCollections).toHaveLength(0);
     });
 
     test('Error should be thrown if server closes connection with error code', async () => {
@@ -621,18 +632,18 @@ describe('PoWebClient', () => {
     test('Breaking out of the iterable should close the connection normally', async () => {
       const client = PoWebClient.initLocal();
 
-      const [collectedParcels] = await Promise.all([
+      const [parcelCollections] = await Promise.all([
         asyncIterableToArray(iterableTake(client.collectParcels([nonceSigner]), 1)),
         mockServer.runActions(
           new AcceptConnectionAction(),
           new SendHandshakeChallengeAction(NONCE),
           new ReceiveMessageAction(), // Handshake response
-          new SendMessageAction(new ParcelDelivery('id1', new ArrayBuffer(0)).serialize()),
-          new SendMessageAction(new ParcelDelivery('id2', new ArrayBuffer(0)).serialize()),
+          new DeliverParcelAction(new ArrayBuffer(0), 'id1'),
+          new DeliverParcelAction(new ArrayBuffer(0), 'id2'),
         ),
       ]);
 
-      await expect(collectedParcels).toHaveLength(1);
+      expect(parcelCollections).toHaveLength(1);
 
       await expect(mockServer.waitForPeerClosure()).resolves.toEqual<CloseFrame>({
         code: WebSocketCode.NORMAL,
@@ -671,14 +682,132 @@ describe('PoWebClient', () => {
       });
     });
 
-    describe('Collector', () => {
-      test.todo("No collectors should be output if the server doesn't deliver anything");
+    describe('Collection', () => {
+      test("No collection should be output if the server doesn't deliver anything", async () => {
+        const client = PoWebClient.initLocal();
 
-      test.todo('One collector should be output if there is one delivery');
+        const [parcelCollections] = await Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(
+            new AcceptConnectionAction(),
+            new SendHandshakeChallengeAction(NONCE),
+            new ReceiveMessageAction(), // Handshake response
+            new CloseConnectionAction(),
+          ),
+        ]);
 
-      test.todo('Multiple collectors should be output if there are multiple deliveries');
+        await expect(parcelCollections).toHaveLength(0);
+      });
 
-      test.todo('Acknowledging the collector should send an ACK to the server');
+      test('One collection should be output if there is one delivery', async () => {
+        const client = PoWebClient.initLocal();
+
+        const [parcelCollections] = await Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(
+            new AcceptConnectionAction(),
+            new SendHandshakeChallengeAction(NONCE),
+            new ReceiveMessageAction(), // Handshake response
+            new DeliverParcelAction(new ArrayBuffer(0), 'id1'),
+            new CloseConnectionAction(),
+          ),
+        ]);
+
+        expect(parcelCollections).toHaveLength(1);
+        expect(parcelCollections[0]).toBeInstanceOf(ParcelCollection);
+      });
+
+      test('Multiple collections should be output if there are multiple deliveries', async () => {
+        const client = PoWebClient.initLocal();
+
+        const [parcelCollections] = await Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(
+            new AcceptConnectionAction(),
+            new SendHandshakeChallengeAction(NONCE),
+            new ReceiveMessageAction(), // Handshake response
+            new DeliverParcelAction(new ArrayBuffer(0), 'id1'),
+            new DeliverParcelAction(new ArrayBuffer(0), 'id2'),
+            new CloseConnectionAction(),
+          ),
+        ]);
+
+        expect(parcelCollections).toHaveLength(2);
+      });
+
+      test('Parcel serialization should be encapsulated', async () => {
+        const client = PoWebClient.initLocal();
+        const parcelSerialized = bufferToArray(Buffer.from('I am a parcel :wink: :wink:'));
+
+        const [parcelCollections] = await Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(
+            new AcceptConnectionAction(),
+            new SendHandshakeChallengeAction(NONCE),
+            new ReceiveMessageAction(), // Handshake response
+            new DeliverParcelAction(parcelSerialized, 'id1'),
+            new CloseConnectionAction(),
+          ),
+        ]);
+
+        expectArrayBuffersToEqual(parcelSerialized, parcelCollections[0].parcelSerialized);
+      });
+
+      test('Nonce signer should be set as the trusted certificates', async () => {
+        const client = PoWebClient.initLocal();
+        const nonceSigner2KeyPair = await generateRSAKeyPair();
+        const nonceSigner2Certificate = await issueEndpointCertificate({
+          issuerCertificate: certificationPath.privateGateway.certificate,
+          issuerPrivateKey: certificationPath.privateGateway.privateKey,
+          subjectPublicKey: nonceSigner2KeyPair.publicKey,
+          validityEndDate: certificationPath.privateGateway.certificate.expiryDate,
+        });
+        const nonceSigner2 = new Signer(nonceSigner2Certificate, nonceSigner2KeyPair.privateKey);
+
+        const [parcelCollections] = await Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner, nonceSigner2])),
+          mockServer.runActions(
+            new AcceptConnectionAction(),
+            new SendHandshakeChallengeAction(NONCE),
+            new ReceiveMessageAction(), // Handshake response
+            new DeliverParcelAction(new ArrayBuffer(0), 'id1'),
+            new CloseConnectionAction(),
+          ),
+        ]);
+
+        const trustedCertificates = parcelCollections[0].trustedCertificates;
+        expect(trustedCertificates).toHaveLength(2);
+        expect(trustedCertificates[0].isEqual(nonceSigner.certificate)).toBeTrue();
+        expect(trustedCertificates[1].isEqual(nonceSigner2.certificate)).toBeTrue();
+      });
+
+      test('Acknowledging the collection should send an ACK to the server', async () => {
+        const client = PoWebClient.initLocal();
+        const ackReceiver = new ReceiveMessageAction();
+        const deliveryId = 'id1';
+
+        await Promise.all([
+          pipe(
+            client.collectParcels([nonceSigner]),
+            async (collections): Promise<void> => {
+              for await (const collection of collections) {
+                await collection.ack();
+              }
+            },
+          ),
+          mockServer.runActions(
+            new AcceptConnectionAction(),
+            new SendHandshakeChallengeAction(NONCE),
+            new ReceiveMessageAction(), // Handshake response
+            new DeliverParcelAction(new ArrayBuffer(0), deliveryId),
+            ackReceiver,
+            new CloseConnectionAction(),
+          ),
+        ]);
+
+        expect(ackReceiver.wasRun).toBeTrue();
+        expect(ackReceiver.message).toEqual(deliveryId);
+      });
     });
   });
 });
@@ -696,5 +825,11 @@ class SendHandshakeChallengeAction extends SendMessageAction {
   constructor(nonce: ArrayBuffer) {
     const challenge = new HandshakeChallenge(nonce);
     super(challenge.serialize());
+  }
+}
+
+class DeliverParcelAction extends SendMessageAction {
+  constructor(parcelSerialized: ArrayBuffer, deliveryId: string) {
+    super(new ParcelDelivery(deliveryId, parcelSerialized).serialize());
   }
 }

@@ -32,3 +32,15 @@ export async function* iterableTake<T>(iterable: AsyncIterable<T>, max: number):
     }
   }
 }
+
+export function expectArrayBuffersToEqual(
+  expectedArrayBuffer: ArrayBuffer,
+  actualArrayBuffer: ArrayBuffer,
+): void {
+  expect(expectedArrayBuffer).toBeInstanceOf(ArrayBuffer);
+  expect(actualArrayBuffer).toBeInstanceOf(ArrayBuffer);
+
+  const expectedBuffer = Buffer.from(expectedArrayBuffer);
+  const actualBuffer = Buffer.from(actualArrayBuffer);
+  expect(expectedBuffer.equals(actualBuffer)).toBeTrue();
+}
