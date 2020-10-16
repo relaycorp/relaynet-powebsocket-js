@@ -188,6 +188,12 @@ export class PoWebClient {
     throw new ParcelDeliveryError(`Could not deliver parcel (HTTP ${response.status})`);
   }
 
+  /**
+   * Collect parcels from the gateway.
+   *
+   * @param nonceSigners The keys for the private nodes on whose behalf parcels are being collected
+   * @param streamingMode
+   */
   public async *collectParcels(
     nonceSigners: readonly Signer[],
     streamingMode: StreamingMode = StreamingMode.KEEP_ALIVE,
