@@ -1,7 +1,6 @@
 version = 1
 
 [merge]
-method = "squash"
 prioritize_ready_to_merge = true
 
 [merge.message]
