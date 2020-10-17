@@ -1,14 +1,33 @@
 import {
   derSerializePublicKey,
   DETACHED_SIGNATURE_TYPES,
+  HandshakeChallenge,
+  HandshakeResponse,
+  MAX_RAMF_MESSAGE_LENGTH,
+  ParcelCollection,
+  ParcelDelivery,
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
 import axios, { AxiosInstance } from 'axios';
+import bufferToArray from 'buffer-to-arraybuffer';
 import { createHash } from 'crypto';
 import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
-import { ParcelDeliveryError, RefusedParcelError, ServerError } from './errors';
+import pipe from 'it-pipe';
+import { source } from 'stream-to-it';
+import { resolve as resolveURL } from 'url';
+import WebSocket, { createWebSocketStream } from 'ws';
+
+import { WebSocketCode, WebSocketStateManager } from './_websocketUtils';
+import {
+  InvalidHandshakeChallengeError,
+  NonceSignerError,
+  ParcelDeliveryError,
+  RefusedParcelError,
+  ServerError,
+} from './errors';
+import { StreamingMode } from './StreamingMode';
 
 const DEFAULT_LOCAL_PORT = 276;
 const DEFAULT_REMOVE_PORT = 443;
@@ -68,6 +87,8 @@ export class PoWebClient {
    */
   public readonly internalAxios: AxiosInstance;
 
+  private readonly wsBaseURL: string;
+
   protected constructor(
     public readonly hostName: string,
     public readonly port: number,
@@ -86,6 +107,9 @@ export class PoWebClient {
       timeout: timeoutMs,
       validateStatus: () => true,
     });
+
+    const wsSchema = useTLS ? 'wss' : 'ws';
+    this.wsBaseURL = `${wsSchema}://${hostName}:${port}/v1/`;
   }
 
   /**
@@ -161,6 +185,112 @@ export class PoWebClient {
       throw new ServerError(`Server was unable to get parcel (HTTP ${response.status})`);
     }
     throw new ParcelDeliveryError(`Could not deliver parcel (HTTP ${response.status})`);
+  }
+
+  /**
+   * Collect parcels from the gateway.
+   *
+   * @param nonceSigners The keys for the private nodes on whose behalf parcels are being collected
+   * @param streamingMode
+   */
+  public async *collectParcels(
+    nonceSigners: readonly Signer[],
+    streamingMode: StreamingMode = StreamingMode.KEEP_ALIVE,
+  ): AsyncIterable<ParcelCollection> {
+    if (nonceSigners.length === 0) {
+      throw new NonceSignerError('At least one nonce signer must be specified');
+    }
+
+    const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
+    const keepAliveHeader = streamingMode === StreamingMode.KEEP_ALIVE ? 'on' : 'off';
+    const ws = new WebSocket(wsURL, {
+      headers: { 'X-Relaynet-Keep-Alive': keepAliveHeader },
+      maxPayload: MAX_RAMF_MESSAGE_LENGTH,
+    });
+
+    const stateManager = new WebSocketStateManager();
+    ws.on('close', (code, reason) => {
+      stateManager.registerServerClosure(code, reason);
+    });
+
+    await this.doHandshake(ws, nonceSigners);
+
+    const incomingDeliveries = source(createWebSocketStream(ws));
+
+    async function* parseParcelDeliveries(
+      parcelDeliveriesSerialized: AsyncIterable<Buffer>,
+    ): AsyncIterable<ParcelDelivery> {
+      for await (const parcelDeliverySerialized of parcelDeliveriesSerialized) {
+        try {
+          yield ParcelDelivery.deserialize(bufferToArray(parcelDeliverySerialized));
+        } catch (error) {
+          stateManager.registerServerProtocolViolation(
+            new ParcelDeliveryError(error, 'Received malformed parcel delivery from the server'),
+            { code: WebSocketCode.CANNOT_ACCEPT, reason: 'Malformed parcel delivery' },
+          );
+          break;
+        }
+      }
+    }
+
+    async function* convertDeliveriesToCollections(
+      deliveries: AsyncIterable<ParcelDelivery>,
+    ): AsyncIterable<ParcelCollection> {
+      const trustedCertificates = nonceSigners.map((s) => s.certificate);
+      for await (const delivery of deliveries) {
+        yield new ParcelCollection(delivery.parcelSerialized, trustedCertificates, async () =>
+          ws.send(delivery.deliveryId),
+        );
+      }
+    }
+
+    try {
+      yield* await pipe(incomingDeliveries, parseParcelDeliveries, convertDeliveriesToCollections);
+    } finally {
+      if (!stateManager.hasServerClosedConnection) {
+        ws.close(stateManager.clientCloseFrame.code, stateManager.clientCloseFrame.reason);
+      }
+
+      stateManager.throwConnectionErrorIfAny();
+    }
+  }
+
+  private async doHandshake(ws: WebSocket, nonceSigners: readonly Signer[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      function rejectPrematureClose(): void {
+        reject(
+          new InvalidHandshakeChallengeError(
+            'Server closed the connection before/during the handshake',
+          ),
+        );
+      }
+      ws.once('close', rejectPrematureClose);
+
+      ws.once('message', async (message) => {
+        let challenge: HandshakeChallenge;
+        try {
+          challenge = HandshakeChallenge.deserialize(bufferToArray(message));
+        } catch (error) {
+          ws.close(WebSocketCode.CANNOT_ACCEPT, 'Malformed handshake challenge');
+          reject(
+            new InvalidHandshakeChallengeError(
+              error,
+              'Server sent a malformed handshake challenge',
+            ),
+          );
+          return;
+        }
+
+        const nonceSignatures = await Promise.all(
+          nonceSigners.map((s) => s.sign(challenge.nonce, DETACHED_SIGNATURE_TYPES.NONCE)),
+        );
+        const response = new HandshakeResponse(nonceSignatures);
+        ws.send(Buffer.from(response.serialize()));
+
+        resolve();
+        ws.removeListener('close', rejectPrematureClose);
+      });
+    });
   }
 }
 
