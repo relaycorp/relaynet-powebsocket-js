@@ -45,6 +45,21 @@
 </header>
 <nav class="tsd-navigation secondary">
 	<ul>
+		<li class=" tsd-kind-enum tsd-is-external">
+			<a href="../enums/streamingmode.html" class="tsd-kind-icon">Streaming<wbr>Mode</a>
+		</li>
+		<li class=" tsd-kind-enum tsd-is-external">
+			<a href="../enums/websocketcode.html" class="tsd-kind-icon">Web<wbr>Socket<wbr>Code</a>
+		</li>
+		<li class=" tsd-kind-class tsd-is-external">
+			<a href="clienterror.html" class="tsd-kind-icon">Client<wbr>Error</a>
+		</li>
+		<li class=" tsd-kind-class tsd-is-external">
+			<a href="invalidhandshakechallengeerror.html" class="tsd-kind-icon">Invalid<wbr>Handshake<wbr>Challenge<wbr>Error</a>
+		</li>
+		<li class=" tsd-kind-class tsd-is-external">
+			<a href="noncesignererror.html" class="tsd-kind-icon">Nonce<wbr>Signer<wbr>Error</a>
+		</li>
 		<li class=" tsd-kind-class tsd-is-external">
 			<a href="parceldeliveryerror.html" class="tsd-kind-icon">Parcel<wbr>Delivery<wbr>Error</a>
 		</li>
@@ -55,13 +70,13 @@
 					<a href="powebclient.html#hostname" class="tsd-kind-icon">host<wbr>Name</a>
 				</li>
 				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-external">
-					<a href="powebclient.html#internalaxios" class="tsd-kind-icon">internal<wbr>Axios</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-external">
 					<a href="powebclient.html#port" class="tsd-kind-icon">port</a>
 				</li>
 				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-external">
 					<a href="powebclient.html#usetls" class="tsd-kind-icon">useTLS</a>
+				</li>
+				<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-external">
+					<a href="powebclient.html#collectparcels" class="tsd-kind-icon">collect<wbr>Parcels</a>
 				</li>
 				<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-external">
 					<a href="powebclient.html#deliverparcel" class="tsd-kind-icon">deliver<wbr>Parcel</a>
@@ -88,6 +103,12 @@
 		</li>
 		<li class=" tsd-kind-class tsd-is-external">
 			<a href="servererror.html" class="tsd-kind-icon">Server<wbr>Error</a>
+		</li>
+		<li class=" tsd-kind-class tsd-is-external">
+			<a href="websocketstatemanager.html" class="tsd-kind-icon">Web<wbr>Socket<wbr>State<wbr>Manager</a>
+		</li>
+		<li class=" tsd-kind-interface tsd-is-external">
+			<a href="../interfaces/closeframe.html" class="tsd-kind-icon">Close<wbr>Frame</a>
 		</li>
 		<li class=" tsd-kind-variable tsd-is-external">
 			<a href="../globals.html#default_local_port" class="tsd-kind-icon">DEFAULT_<wbr>LOCAL_<wbr>PORT</a>
@@ -146,7 +167,6 @@
 						<h3>Properties</h3>
 						<ul class="tsd-index-list">
 							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-external"><a href="powebclient.html#hostname" class="tsd-kind-icon">host<wbr>Name</a></li>
-							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-external"><a href="powebclient.html#internalaxios" class="tsd-kind-icon">internal<wbr>Axios</a></li>
 							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-external"><a href="powebclient.html#port" class="tsd-kind-icon">port</a></li>
 							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-external"><a href="powebclient.html#usetls" class="tsd-kind-icon">useTLS</a></li>
 						</ul>
@@ -154,6 +174,7 @@
 					<section class="tsd-index-section tsd-is-external">
 						<h3>Methods</h3>
 						<ul class="tsd-index-list">
+							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="powebclient.html#collectparcels" class="tsd-kind-icon">collect<wbr>Parcels</a></li>
 							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="powebclient.html#deliverparcel" class="tsd-kind-icon">deliver<wbr>Parcel</a></li>
 							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="powebclient.html#preregisternode" class="tsd-kind-icon">pre<wbr>Register<wbr>Node</a></li>
 							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="powebclient.html#registernode" class="tsd-kind-icon">register<wbr>Node</a></li>
@@ -172,25 +193,9 @@
 				<div class="tsd-signature tsd-kind-icon">host<wbr>Name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L72">src/lib/PoWebClient.ts:72</a></li>
+						<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L93">src/lib/PoWebClient.ts:93</a></li>
 					</ul>
 				</aside>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-external">
-				<a name="internalaxios" class="tsd-anchor"></a>
-				<h3><span class="tsd-flag ts-flagReadonly">Readonly</span> internal<wbr>Axios</h3>
-				<div class="tsd-signature tsd-kind-icon">internal<wbr>Axios<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">AxiosInstance</span></div>
-				<aside class="tsd-sources">
-					<ul>
-						<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L69">src/lib/PoWebClient.ts:69</a></li>
-					</ul>
-				</aside>
-				<div class="tsd-comment tsd-typography">
-					<dl class="tsd-comment-tags">
-						<dt>internal</dt>
-						<dd></dd>
-					</dl>
-				</div>
 			</section>
 			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-external">
 				<a name="port" class="tsd-anchor"></a>
@@ -198,7 +203,7 @@
 				<div class="tsd-signature tsd-kind-icon">port<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L73">src/lib/PoWebClient.ts:73</a></li>
+						<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L94">src/lib/PoWebClient.ts:94</a></li>
 					</ul>
 				</aside>
 			</section>
@@ -208,13 +213,49 @@
 				<div class="tsd-signature tsd-kind-icon">useTLS<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 				<aside class="tsd-sources">
 					<ul>
-						<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L74">src/lib/PoWebClient.ts:74</a></li>
+						<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L95">src/lib/PoWebClient.ts:95</a></li>
 					</ul>
 				</aside>
 			</section>
 		</section>
 		<section class="tsd-panel-group tsd-member-group tsd-is-external">
 			<h2>Methods</h2>
+			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-external">
+				<a name="collectparcels" class="tsd-anchor"></a>
+				<h3>collect<wbr>Parcels</h3>
+				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-external">
+					<li class="tsd-signature tsd-kind-icon">collect<wbr>Parcels<span class="tsd-signature-symbol">(</span>nonceSigners<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-type">Signer</span><span class="tsd-signature-symbol">[]</span>, streamingMode<span class="tsd-signature-symbol">?: </span><a href="../enums/streamingmode.html" class="tsd-signature-type">StreamingMode</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ParcelCollection</span><span class="tsd-signature-symbol">&gt;</span></li>
+				</ul>
+				<ul class="tsd-descriptions">
+					<li class="tsd-description">
+						<aside class="tsd-sources">
+							<ul>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L196">src/lib/PoWebClient.ts:196</a></li>
+							</ul>
+						</aside>
+						<div class="tsd-comment tsd-typography">
+							<div class="lead">
+								<p>Collect parcels from the gateway.</p>
+							</div>
+						</div>
+						<h4 class="tsd-parameters-title">Parameters</h4>
+						<ul class="tsd-parameters">
+							<li>
+								<h5>nonceSigners: <span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-type">Signer</span><span class="tsd-signature-symbol">[]</span></h5>
+								<div class="tsd-comment tsd-typography">
+									<p>The keys for the private nodes on whose behalf parcels are being collected</p>
+								</div>
+							</li>
+							<li>
+								<h5><span class="tsd-flag ts-flagDefault value">Default value</span> streamingMode: <a href="../enums/streamingmode.html" class="tsd-signature-type">StreamingMode</a><span class="tsd-signature-symbol"> = StreamingMode.KEEP_ALIVE</span></h5>
+								<div class="tsd-comment tsd-typography">
+								</div>
+							</li>
+						</ul>
+						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ParcelCollection</span><span class="tsd-signature-symbol">&gt;</span></h4>
+					</li>
+				</ul>
+			</section>
 			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-external">
 				<a name="deliverparcel" class="tsd-anchor"></a>
 				<h3>deliver<wbr>Parcel</h3>
@@ -225,7 +266,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L142">src/lib/PoWebClient.ts:142</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L166">src/lib/PoWebClient.ts:166</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -258,7 +299,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L98">src/lib/PoWebClient.ts:98</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L122">src/lib/PoWebClient.ts:122</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -295,7 +336,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L119">src/lib/PoWebClient.ts:119</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L143">src/lib/PoWebClient.ts:143</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -326,7 +367,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L37">src/lib/PoWebClient.ts:37</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L56">src/lib/PoWebClient.ts:56</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -358,7 +399,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5352a50/src/lib/PoWebClient.ts#L47">src/lib/PoWebClient.ts:47</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/c65fc95/src/lib/PoWebClient.ts#L66">src/lib/PoWebClient.ts:66</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
