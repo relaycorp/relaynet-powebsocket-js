@@ -200,10 +200,12 @@ describe('PoWebClient', () => {
       nodePublicKey = await certificationPath.privateGateway.certificate.getPublicKey();
     });
 
+    const PNRA_SERIALIZED = Buffer.from('the PNRA');
+
     test('Request should be POSTed to /v1/pre-registrations', async () => {
       mockAxios
         .onPost('/pre-registrations')
-        .reply(200, null, { 'content-type': PNRA_CONTENT_TYPE });
+        .reply(200, PNRA_SERIALIZED, { 'content-type': PNRA_CONTENT_TYPE });
 
       await client.preRegisterNode(nodePublicKey);
 
@@ -215,7 +217,7 @@ describe('PoWebClient', () => {
     test('Request body should be SHA-256 digest of the node public key', async () => {
       mockAxios
         .onPost('/pre-registrations')
-        .reply(200, null, { 'content-type': PNRA_CONTENT_TYPE });
+        .reply(200, PNRA_SERIALIZED, { 'content-type': PNRA_CONTENT_TYPE });
 
       await client.preRegisterNode(nodePublicKey);
 
@@ -247,18 +249,14 @@ describe('PoWebClient', () => {
     });
 
     test('Authorization should be output serialized if status is 200', async () => {
-      const expectedAuthorizationSerialized = Buffer.from('the PNRA');
-      mockAxios
-        .onPost('/pre-registrations')
-        .reply(200, bufferToArray(expectedAuthorizationSerialized), {
-          'content-type': PNRA_CONTENT_TYPE,
-        });
+      mockAxios.onPost('/pre-registrations').reply(200, PNRA_SERIALIZED, {
+        'content-type': PNRA_CONTENT_TYPE,
+      });
 
       const authorizationSerialized = await client.preRegisterNode(nodePublicKey);
 
-      expect(
-        expectedAuthorizationSerialized.equals(Buffer.from(authorizationSerialized)),
-      ).toBeTruthy();
+      expect(authorizationSerialized).toBeInstanceOf(ArrayBuffer);
+      expect(PNRA_SERIALIZED.equals(Buffer.from(authorizationSerialized))).toBeTruthy();
     });
   });
 
@@ -273,7 +271,7 @@ describe('PoWebClient', () => {
     const pnraSerialized = bufferToArray(Buffer.from('the authorization'));
 
     let expectedRegistration: PrivateNodeRegistration;
-    let expectedRegistrationSerialized: ArrayBuffer;
+    let expectedRegistrationSerialized: Buffer;
     beforeAll(async () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -282,7 +280,7 @@ describe('PoWebClient', () => {
         certificationPath.privateGateway.certificate,
         certificationPath.publicGateway.certificate,
       );
-      expectedRegistrationSerialized = expectedRegistration.serialize();
+      expectedRegistrationSerialized = Buffer.from(expectedRegistration.serialize());
     });
 
     test('PNRA should be POSTed to /v1/nodes', async () => {
@@ -326,7 +324,7 @@ describe('PoWebClient', () => {
       const invalidRegistration = Buffer.from('invalid');
       mockAxios
         .onPost('/nodes')
-        .reply(200, bufferToArray(invalidRegistration), { 'content-type': PNR_CONTENT_TYPE });
+        .reply(200, invalidRegistration, { 'content-type': PNR_CONTENT_TYPE });
 
       await expect(client.registerNode(pnraSerialized)).rejects.toMatchObject({
         message: /^Malformed registration received/,

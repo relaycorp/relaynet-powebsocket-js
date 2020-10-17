@@ -122,9 +122,13 @@ export class PoWebClient {
   public async preRegisterNode(nodePublicKey: CryptoKey): Promise<ArrayBuffer> {
     const nodePublicKeySerialized = await derSerializePublicKey(nodePublicKey);
     const nodePublicKeyDigest = sha256Hex(nodePublicKeySerialized);
-    const response = await this.internalAxios.post('/pre-registrations', nodePublicKeyDigest, {
-      headers: { 'content-type': 'text/plain' },
-    });
+    const response = await this.internalAxios.post<Buffer>(
+      '/pre-registrations',
+      nodePublicKeyDigest,
+      {
+        headers: { 'content-type': 'text/plain' },
+      },
+    );
 
     PoWebClient.requireResponseStatusToEqual(response.status, 200);
     PoWebClient.requireResponseContentTypeToEqual(
@@ -132,7 +136,7 @@ export class PoWebClient {
       PNRA_CONTENT_TYPE,
     );
 
-    return response.data;
+    return bufferToArray(response.data);
   }
 
   /**
@@ -141,7 +145,7 @@ export class PoWebClient {
    * @param pnrrSerialized The Private Node Registration Request
    */
   public async registerNode(pnrrSerialized: ArrayBuffer): Promise<PrivateNodeRegistration> {
-    const response = await this.internalAxios.post('/nodes', pnrrSerialized, {
+    const response = await this.internalAxios.post<Buffer>('/nodes', pnrrSerialized, {
       headers: { 'content-type': PNRR_CONTENT_TYPE },
     });
     PoWebClient.requireResponseStatusToEqual(response.status, 200);
@@ -150,8 +154,9 @@ export class PoWebClient {
       PNR_CONTENT_TYPE,
     );
 
+    const registrationSerialized = bufferToArray(response.data);
     try {
-      return PrivateNodeRegistration.deserialize(response.data);
+      return PrivateNodeRegistration.deserialize(registrationSerialized);
     } catch (exc) {
       throw new ServerError(exc, 'Malformed registration received');
     }
