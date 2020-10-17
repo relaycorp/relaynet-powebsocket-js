@@ -2,7 +2,11 @@
 
 import { VError } from 'verror';
 
-abstract class PoWebError extends VError {}
+export abstract class PoWebError extends VError {
+  get name(): string {
+    return this.constructor.name;
+  }
+}
 
 export class ClientError extends PoWebError {}
 export class ServerError extends PoWebError {}
