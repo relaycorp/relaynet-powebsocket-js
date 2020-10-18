@@ -3,6 +3,7 @@ import { ServerError } from './errors';
 export enum WebSocketCode {
   NORMAL = 1000,
   CANNOT_ACCEPT = 1003,
+  NO_STATUS = 1005,
   VIOLATED_POLICY = 1008,
 }
 
@@ -42,7 +43,7 @@ export class WebSocketStateManager {
   }
 
   public throwConnectionErrorIfAny(): void {
-    if (this.serverCloseFrame && this.serverCloseFrame.code !== WebSocketCode.NORMAL) {
+    if (this.serverCloseFrame && !isCloseCodeNormal(this.serverCloseFrame.code)) {
       throw new ServerError(
         'Server closed connection unexpectedly ' +
           `(code: ${this.serverCloseFrame.code}, reason: ${this.serverCloseFrame.reason})`,
@@ -53,4 +54,8 @@ export class WebSocketStateManager {
       throw this.clientError;
     }
   }
+}
+
+function isCloseCodeNormal(closeCode: number): boolean {
+  return closeCode === WebSocketCode.NORMAL || closeCode === WebSocketCode.NO_STATUS;
 }

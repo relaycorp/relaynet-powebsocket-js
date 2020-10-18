@@ -593,6 +593,24 @@ describe('PoWebClient', () => {
       });
     });
 
+    test('Call should return if server closed connection without status', async () => {
+      const client = PoWebClient.initLocal();
+
+      await Promise.all([
+        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        mockServer.runActions(
+          new AcceptConnectionAction(),
+          new SendHandshakeChallengeAction(NONCE),
+          new ReceiveMessageAction(),
+          new CloseConnectionAction(WebSocketCode.NO_STATUS),
+        ),
+      ]);
+
+      await expect(mockServer.waitForPeerClosure()).resolves.toEqual({
+        code: WebSocketCode.NORMAL,
+      });
+    });
+
     test('Error should be thrown if server closes connection with error code', async () => {
       const client = PoWebClient.initLocal();
       const closeReason = 'Just because';
