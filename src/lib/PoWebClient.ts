@@ -214,7 +214,7 @@ export class PoWebClient {
     });
 
     const stateManager = new WebSocketStateManager();
-    ws.on('close', (code, reason) => {
+    ws.once('close', (code, reason) => {
       stateManager.registerServerClosure(code, reason);
     });
 
@@ -252,7 +252,9 @@ export class PoWebClient {
     try {
       yield* await pipe(incomingDeliveries, parseParcelDeliveries, convertDeliveriesToCollections);
     } finally {
-      if (!stateManager.hasServerClosedConnection) {
+      if (stateManager.hasServerClosedConnection) {
+        ws.close(WebSocketCode.NORMAL);
+      } else {
         ws.close(stateManager.clientCloseFrame.code, stateManager.clientCloseFrame.reason);
       }
 
@@ -263,6 +265,7 @@ export class PoWebClient {
   private async doHandshake(ws: WebSocket, nonceSigners: readonly Signer[]): Promise<void> {
     return new Promise((resolve, reject) => {
       function rejectPrematureClose(): void {
+        ws.close(WebSocketCode.NORMAL);
         reject(
           new InvalidHandshakeChallengeError(
             'Server closed the connection before/during the handshake',

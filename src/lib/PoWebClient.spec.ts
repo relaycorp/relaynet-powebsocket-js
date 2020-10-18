@@ -506,6 +506,10 @@ describe('PoWebClient', () => {
         const error = await getPromiseRejection(sessionPromise);
         expect(error).toBeInstanceOf(InvalidHandshakeChallengeError);
         expect(error.message).toEqual('Server closed the connection before/during the handshake');
+
+        await expect(mockServer.waitForPeerClosure()).resolves.toEqual({
+          code: WebSocketCode.NORMAL,
+        });
       });
 
       test('Server closing connection during handshake should throw error', async () => {
@@ -519,6 +523,10 @@ describe('PoWebClient', () => {
         const error = await getPromiseRejection(sessionPromise);
         expect(error).toBeInstanceOf(InvalidHandshakeChallengeError);
         expect(error.message).toEqual('Server closed the connection before/during the handshake');
+
+        await expect(mockServer.waitForPeerClosure()).resolves.toEqual({
+          code: WebSocketCode.NORMAL,
+        });
       });
 
       test('Getting a malformed challenge should throw an error', async () => {
@@ -579,6 +587,10 @@ describe('PoWebClient', () => {
       ]);
 
       expect(parcelCollections).toHaveLength(0);
+
+      await expect(mockServer.waitForPeerClosure()).resolves.toEqual({
+        code: WebSocketCode.NORMAL,
+      });
     });
 
     test('Error should be thrown if server closes connection with error code', async () => {
@@ -601,6 +613,10 @@ describe('PoWebClient', () => {
         'Server closed connection unexpectedly ' +
           `(code: ${WebSocketCode.VIOLATED_POLICY}, reason: ${closeReason})`,
       );
+
+      await expect(mockServer.waitForPeerClosure()).resolves.toEqual({
+        code: WebSocketCode.NORMAL,
+      });
     });
 
     test('Malformed deliveries should be refused', async () => {
