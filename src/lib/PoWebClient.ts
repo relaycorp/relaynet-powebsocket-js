@@ -217,6 +217,9 @@ export class PoWebClient {
     ws.once('close', (code, reason) => {
       stateManager.registerServerClosure(code, reason);
     });
+    ws.once('error', (error) => {
+      stateManager.registerConnectionError(error);
+    });
 
     await this.doHandshake(ws, nonceSigners);
 
@@ -252,13 +255,15 @@ export class PoWebClient {
     try {
       yield* await pipe(incomingDeliveries, parseParcelDeliveries, convertDeliveriesToCollections);
     } finally {
+      stateManager.throwConnectionErrorIfAny();
+
       if (stateManager.hasServerClosedConnection) {
         ws.close(WebSocketCode.NORMAL);
       } else {
         ws.close(stateManager.clientCloseFrame.code, stateManager.clientCloseFrame.reason);
       }
 
-      stateManager.throwConnectionErrorIfAny();
+      stateManager.throwClientErrorIfAny();
     }
   }
 
@@ -273,6 +278,11 @@ export class PoWebClient {
         );
       }
       ws.once('close', rejectPrematureClose);
+
+      function wrapConnectionError(error: Error): void {
+        reject(new ServerError(error, 'Got connection error before/during the handshake'));
+      }
+      ws.once('error', wrapConnectionError);
 
       ws.once('message', async (message) => {
         let challenge: HandshakeChallenge;
@@ -297,6 +307,7 @@ export class PoWebClient {
 
         resolve();
         ws.removeListener('close', rejectPrematureClose);
+        ws.removeListener('error', wrapConnectionError);
       });
     });
   }

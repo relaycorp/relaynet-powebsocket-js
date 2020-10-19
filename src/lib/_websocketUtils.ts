@@ -22,6 +22,9 @@ export class WebSocketStateManager {
   // tslint:disable-next-line:readonly-keyword
   protected clientError: Error | undefined;
 
+  // tslint:disable-next-line:readonly-keyword
+  private connectionError: Error | undefined;
+
   get hasServerClosedConnection(): boolean {
     return !!this.serverCloseFrame;
   }
@@ -35,6 +38,11 @@ export class WebSocketStateManager {
     this.serverCloseFrame = { code, reason };
   }
 
+  public registerConnectionError(error: Error): void {
+    // tslint:disable-next-line:no-object-mutation
+    this.connectionError = error;
+  }
+
   public registerServerProtocolViolation(clientError: Error, clientCloseFrame: CloseFrame): void {
     // tslint:disable-next-line:no-object-mutation
     this.clientError = clientError;
@@ -43,6 +51,12 @@ export class WebSocketStateManager {
   }
 
   public throwConnectionErrorIfAny(): void {
+    if (this.connectionError) {
+      throw new ServerError(this.connectionError, 'Connection error');
+    }
+  }
+
+  public throwClientErrorIfAny(): void {
     if (this.serverCloseFrame && !isCloseCodeNormal(this.serverCloseFrame.code)) {
       throw new ServerError(
         'Server closed connection unexpectedly ' +

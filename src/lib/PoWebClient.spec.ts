@@ -19,6 +19,7 @@ import {
   CloseConnectionAction,
   CloseFrame,
   createMockWebSocketStream,
+  EmitClientErrorAction,
   MockServer,
   ReceiveMessageAction,
   SendMessageAction,
@@ -529,6 +530,26 @@ describe('PoWebClient', () => {
         });
       });
 
+      test('Connection error during handshake should be rethrown', async () => {
+        const client = PoWebClient.initLocal();
+        const originalError = new Error('Something went wrong');
+
+        const sessionPromise = Promise.all([
+          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          mockServer.runActions(
+            new AcceptConnectionAction(),
+            new EmitClientErrorAction(originalError),
+          ),
+        ]);
+
+        const error = await getPromiseRejection(sessionPromise);
+        expect(error).toBeInstanceOf(ServerError);
+        expect(error.message).toStartWith('Got connection error before/during the handshake:');
+        expect((error as ServerError).cause()).toEqual(originalError);
+
+        expect(mockServer.peerCloseFrame).toBeNull();
+      });
+
       test('Getting a malformed challenge should throw an error', async () => {
         const client = PoWebClient.initLocal();
 
@@ -635,6 +656,28 @@ describe('PoWebClient', () => {
       await expect(mockServer.waitForPeerClosure()).resolves.toEqual({
         code: WebSocketCode.NORMAL,
       });
+    });
+
+    test('Connection error should be rethrown', async () => {
+      const client = PoWebClient.initLocal();
+      const originalError = new Error('Oops');
+
+      const sessionPromise = Promise.all([
+        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        mockServer.runActions(
+          new AcceptConnectionAction(),
+          new SendHandshakeChallengeAction(NONCE),
+          new ReceiveMessageAction(),
+          new EmitClientErrorAction(originalError),
+        ),
+      ]);
+
+      const error = await getPromiseRejection(sessionPromise);
+      expect(error).toBeInstanceOf(ServerError);
+      expect(error.message).toStartWith('Connection error');
+      expect((error as ServerError).cause()).toEqual(originalError);
+
+      expect(mockServer.peerCloseFrame).toBeNull();
     });
 
     test('Malformed deliveries should be refused', async () => {
