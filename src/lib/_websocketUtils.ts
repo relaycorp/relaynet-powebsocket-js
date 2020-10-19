@@ -4,6 +4,7 @@ export enum WebSocketCode {
   NORMAL = 1000,
   CANNOT_ACCEPT = 1003,
   NO_STATUS = 1005,
+  ABRUPT_CLOSE = 1006,
   VIOLATED_POLICY = 1008,
 }
 
@@ -11,6 +12,14 @@ interface CloseFrame {
   readonly code: number;
   readonly reason?: string;
 }
+
+const NORMAL_CLOSE_CODES: readonly WebSocketCode[] = [
+  WebSocketCode.NORMAL,
+  WebSocketCode.NO_STATUS,
+
+  // Workaround for https://github.com/relaycorp/relaynet-poweb-js/issues/41
+  WebSocketCode.ABRUPT_CLOSE,
+];
 
 export class WebSocketStateManager {
   // tslint:disable-next-line:readonly-keyword
@@ -57,7 +66,7 @@ export class WebSocketStateManager {
   }
 
   public throwClientErrorIfAny(): void {
-    if (this.serverCloseFrame && !isCloseCodeNormal(this.serverCloseFrame.code)) {
+    if (this.serverCloseFrame && !NORMAL_CLOSE_CODES.includes(this.serverCloseFrame.code)) {
       throw new ServerError(
         'Server closed connection unexpectedly ' +
           `(code: ${this.serverCloseFrame.code}, reason: ${this.serverCloseFrame.reason})`,
@@ -68,8 +77,4 @@ export class WebSocketStateManager {
       throw this.clientError;
     }
   }
-}
-
-function isCloseCodeNormal(closeCode: number): boolean {
-  return closeCode === WebSocketCode.NORMAL || closeCode === WebSocketCode.NO_STATUS;
 }

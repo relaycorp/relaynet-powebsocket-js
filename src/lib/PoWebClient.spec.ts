@@ -704,6 +704,24 @@ describe('PoWebClient', () => {
       });
     });
 
+    test('Getting a 1005 close code should close the connection normally', async () => {
+      const client = PoWebClient.initLocal();
+
+      await Promise.all([
+        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        mockServer.runActions(
+          new AcceptConnectionAction(),
+          new SendHandshakeChallengeAction(NONCE),
+          new ReceiveMessageAction(), // Handshake response
+          new CloseConnectionAction(WebSocketCode.NO_STATUS),
+        ),
+      ]);
+
+      await expect(mockServer.waitForPeerClosure()).resolves.toEqual<CloseFrame>({
+        code: WebSocketCode.NORMAL,
+      });
+    });
+
     test('Breaking out of the iterable should close the connection normally', async () => {
       const client = PoWebClient.initLocal();
 
