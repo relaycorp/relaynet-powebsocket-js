@@ -257,11 +257,7 @@ export class PoWebClient {
     } finally {
       stateManager.throwConnectionErrorIfAny();
 
-      if (stateManager.hasServerClosedConnection) {
-        ws.close(WebSocketCode.NORMAL);
-      } else {
-        ws.close(stateManager.clientCloseFrame.code, stateManager.clientCloseFrame.reason);
-      }
+      ws.close(stateManager.clientCloseFrame.code, stateManager.clientCloseFrame.reason);
 
       stateManager.throwClientErrorIfAny();
     }

@@ -34,10 +34,6 @@ export class WebSocketStateManager {
   // tslint:disable-next-line:readonly-keyword
   private connectionError: Error | undefined;
 
-  get hasServerClosedConnection(): boolean {
-    return !!this.serverCloseFrame;
-  }
-
   get clientCloseFrame(): CloseFrame {
     return this._clientCloseFrame;
   }
