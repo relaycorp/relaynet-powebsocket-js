@@ -85,10 +85,16 @@
 					<a href="websocketstatemanager.html#hasserverclosedconnection" class="tsd-kind-icon">has<wbr>Server<wbr>Closed<wbr>Connection</a>
 				</li>
 				<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-external">
+					<a href="websocketstatemanager.html#registerconnectionerror" class="tsd-kind-icon">register<wbr>Connection<wbr>Error</a>
+				</li>
+				<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-external">
 					<a href="websocketstatemanager.html#registerserverclosure" class="tsd-kind-icon">register<wbr>Server<wbr>Closure</a>
 				</li>
 				<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-external">
 					<a href="websocketstatemanager.html#registerserverprotocolviolation" class="tsd-kind-icon">register<wbr>Server<wbr>Protocol<wbr>Violation</a>
+				</li>
+				<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-external">
+					<a href="websocketstatemanager.html#throwclienterrorifany" class="tsd-kind-icon">throw<wbr>Client<wbr>Error<wbr>IfAny</a>
 				</li>
 				<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-external">
 					<a href="websocketstatemanager.html#throwconnectionerrorifany" class="tsd-kind-icon">throw<wbr>Connection<wbr>Error<wbr>IfAny</a>
@@ -157,8 +163,10 @@
 					<section class="tsd-index-section tsd-is-external">
 						<h3>Methods</h3>
 						<ul class="tsd-index-list">
+							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="websocketstatemanager.html#registerconnectionerror" class="tsd-kind-icon">register<wbr>Connection<wbr>Error</a></li>
 							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="websocketstatemanager.html#registerserverclosure" class="tsd-kind-icon">register<wbr>Server<wbr>Closure</a></li>
 							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="websocketstatemanager.html#registerserverprotocolviolation" class="tsd-kind-icon">register<wbr>Server<wbr>Protocol<wbr>Violation</a></li>
+							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="websocketstatemanager.html#throwclienterrorifany" class="tsd-kind-icon">throw<wbr>Client<wbr>Error<wbr>IfAny</a></li>
 							<li class="tsd-kind-method tsd-parent-kind-class tsd-is-external"><a href="websocketstatemanager.html#throwconnectionerrorifany" class="tsd-kind-icon">throw<wbr>Connection<wbr>Error<wbr>IfAny</a></li>
 						</ul>
 					</section>
@@ -177,7 +185,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5c9dda3/src/lib/_websocketUtils.ts#L29">src/lib/_websocketUtils.ts:29</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/1e804ad/src/lib/_websocketUtils.ts#L32">src/lib/_websocketUtils.ts:32</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-returns-title">Returns <a href="../interfaces/closeframe.html" class="tsd-signature-type">CloseFrame</a></h4>
@@ -194,7 +202,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5c9dda3/src/lib/_websocketUtils.ts#L25">src/lib/_websocketUtils.ts:25</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/1e804ad/src/lib/_websocketUtils.ts#L28">src/lib/_websocketUtils.ts:28</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
@@ -205,6 +213,29 @@
 		<section class="tsd-panel-group tsd-member-group tsd-is-external">
 			<h2>Methods</h2>
 			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-external">
+				<a name="registerconnectionerror" class="tsd-anchor"></a>
+				<h3>register<wbr>Connection<wbr>Error</h3>
+				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-external">
+					<li class="tsd-signature tsd-kind-icon">register<wbr>Connection<wbr>Error<span class="tsd-signature-symbol">(</span>error<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Error</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+				</ul>
+				<ul class="tsd-descriptions">
+					<li class="tsd-description">
+						<aside class="tsd-sources">
+							<ul>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/1e804ad/src/lib/_websocketUtils.ts#L41">src/lib/_websocketUtils.ts:41</a></li>
+							</ul>
+						</aside>
+						<h4 class="tsd-parameters-title">Parameters</h4>
+						<ul class="tsd-parameters">
+							<li>
+								<h5>error: <span class="tsd-signature-type">Error</span></h5>
+							</li>
+						</ul>
+						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+					</li>
+				</ul>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-external">
 				<a name="registerserverclosure" class="tsd-anchor"></a>
 				<h3>register<wbr>Server<wbr>Closure</h3>
 				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-external">
@@ -214,7 +245,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5c9dda3/src/lib/_websocketUtils.ts#L33">src/lib/_websocketUtils.ts:33</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/1e804ad/src/lib/_websocketUtils.ts#L36">src/lib/_websocketUtils.ts:36</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -240,7 +271,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5c9dda3/src/lib/_websocketUtils.ts#L38">src/lib/_websocketUtils.ts:38</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/1e804ad/src/lib/_websocketUtils.ts#L46">src/lib/_websocketUtils.ts:46</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-parameters-title">Parameters</h4>
@@ -257,6 +288,23 @@
 				</ul>
 			</section>
 			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-external">
+				<a name="throwclienterrorifany" class="tsd-anchor"></a>
+				<h3>throw<wbr>Client<wbr>Error<wbr>IfAny</h3>
+				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-external">
+					<li class="tsd-signature tsd-kind-icon">throw<wbr>Client<wbr>Error<wbr>IfAny<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+				</ul>
+				<ul class="tsd-descriptions">
+					<li class="tsd-description">
+						<aside class="tsd-sources">
+							<ul>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/1e804ad/src/lib/_websocketUtils.ts#L59">src/lib/_websocketUtils.ts:59</a></li>
+							</ul>
+						</aside>
+						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+					</li>
+				</ul>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-external">
 				<a name="throwconnectionerrorifany" class="tsd-anchor"></a>
 				<h3>throw<wbr>Connection<wbr>Error<wbr>IfAny</h3>
 				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-external">
@@ -266,7 +314,7 @@
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/5c9dda3/src/lib/_websocketUtils.ts#L45">src/lib/_websocketUtils.ts:45</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/1e804ad/src/lib/_websocketUtils.ts#L53">src/lib/_websocketUtils.ts:53</a></li>
 							</ul>
 						</aside>
 						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
