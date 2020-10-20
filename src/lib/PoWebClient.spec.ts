@@ -378,7 +378,7 @@ describe('PoWebClient', () => {
       ).toBeTruthy();
     });
 
-    test('Delivery should be signed with nonce signer', async () => {
+    test('Delivery should be signed', async () => {
       mockAxios.onPost('/parcels').reply(200, null);
 
       await client.deliverParcel(parcelSerialized, signer);
