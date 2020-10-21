@@ -207,9 +207,8 @@ export class PoWebClient {
     }
 
     const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
-    const keepAliveHeader = streamingMode === StreamingMode.KEEP_ALIVE ? 'on' : 'off';
     const ws = new WebSocket(wsURL, {
-      headers: { 'X-Relaynet-Keep-Alive': keepAliveHeader },
+      headers: { 'X-Relaynet-Streaming-Mode': streamingMode },
       maxPayload: MAX_RAMF_MESSAGE_LENGTH,
     });
 

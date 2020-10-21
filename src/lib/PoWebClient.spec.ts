@@ -754,7 +754,9 @@ describe('PoWebClient', () => {
 
         expect(WebSocket).toBeCalledWith(
           expect.anything(),
-          expect.objectContaining<ClientOptions>({ headers: { 'X-Relaynet-Keep-Alive': 'on' } }),
+          expect.objectContaining<ClientOptions>({
+            headers: { 'X-Relaynet-Streaming-Mode': 'keep-alive' },
+          }),
         );
       });
 
@@ -770,7 +772,9 @@ describe('PoWebClient', () => {
 
         expect(WebSocket).toBeCalledWith(
           expect.anything(),
-          expect.objectContaining<ClientOptions>({ headers: { 'X-Relaynet-Keep-Alive': 'off' } }),
+          expect.objectContaining<ClientOptions>({
+            headers: { 'X-Relaynet-Streaming-Mode': 'close-upon-completion' },
+          }),
         );
       });
     });
