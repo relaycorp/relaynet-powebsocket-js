@@ -13,7 +13,12 @@ import {
   PrivateNodeRegistration,
   Signer,
 } from '@relaycorp/relaynet-core';
-import { CertificationPath, generateCertificationPath } from '@relaycorp/relaynet-testing';
+import {
+  generateNodeKeyPairSet,
+  generatePDACertificationPath,
+  NodeKeyPairSet,
+  PDACertPath,
+} from '@relaycorp/relaynet-testing';
 import {
   AcceptConnectionAction,
   CloseConnectionAction,
@@ -64,9 +69,11 @@ import {
   PoWebClient,
 } from './PoWebClient';
 
-let certificationPath: CertificationPath;
+let nodeKeyPairs: NodeKeyPairSet;
+let certificationPath: PDACertPath;
 beforeAll(async () => {
-  certificationPath = await generateCertificationPath();
+  nodeKeyPairs = await generateNodeKeyPairSet();
+  certificationPath = await generatePDACertificationPath(nodeKeyPairs);
 });
 
 describe('PoWebClient', () => {
@@ -196,11 +203,6 @@ describe('PoWebClient', () => {
       mockAxios = new MockAdapter(client.internalAxios);
     });
 
-    let nodePublicKey: CryptoKey;
-    beforeAll(async () => {
-      nodePublicKey = await certificationPath.privateGateway.certificate.getPublicKey();
-    });
-
     const PNRA_SERIALIZED = Buffer.from('the PNRA');
 
     test('Request should be POSTed to /v1/pre-registrations', async () => {
@@ -208,7 +210,7 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(200, PNRA_SERIALIZED, { 'content-type': PNRA_CONTENT_TYPE });
 
-      await client.preRegisterNode(nodePublicKey);
+      await client.preRegisterNode(nodeKeyPairs.privateGateway.publicKey);
 
       expect(mockAxios.history.post).toHaveLength(1);
       expect(mockAxios.history.post[0].url).toEqual('/pre-registrations');
@@ -220,9 +222,11 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(200, PNRA_SERIALIZED, { 'content-type': PNRA_CONTENT_TYPE });
 
-      await client.preRegisterNode(nodePublicKey);
+      await client.preRegisterNode(nodeKeyPairs.privateGateway.publicKey);
 
-      const publicKeySerialized = await derSerializePublicKey(nodePublicKey);
+      const publicKeySerialized = await derSerializePublicKey(
+        nodeKeyPairs.privateGateway.publicKey,
+      );
       const expectedDigest = createHash('sha256').update(publicKeySerialized).digest('hex');
       expect(Buffer.from(mockAxios.history.post[0].data).toString()).toEqual(expectedDigest);
     });
@@ -233,7 +237,7 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(200, null, { 'content-type': invalidContentType });
 
-      await expect(client.preRegisterNode(nodePublicKey)).rejects.toEqual(
+      await expect(client.preRegisterNode(nodeKeyPairs.privateGateway.publicKey)).rejects.toEqual(
         new ServerError(`Server responded with invalid content type (${invalidContentType})`),
       );
     });
@@ -244,7 +248,7 @@ describe('PoWebClient', () => {
         .onPost('/pre-registrations')
         .reply(statusCode, null, { 'content-type': PNRA_CONTENT_TYPE });
 
-      await expect(client.preRegisterNode(nodePublicKey)).rejects.toEqual(
+      await expect(client.preRegisterNode(nodeKeyPairs.privateGateway.publicKey)).rejects.toEqual(
         new ServerError(`Unexpected response status (${statusCode})`),
       );
     });
@@ -254,7 +258,9 @@ describe('PoWebClient', () => {
         'content-type': PNRA_CONTENT_TYPE,
       });
 
-      const authorizationSerialized = await client.preRegisterNode(nodePublicKey);
+      const authorizationSerialized = await client.preRegisterNode(
+        nodeKeyPairs.privateGateway.publicKey,
+      );
 
       expect(authorizationSerialized).toBeInstanceOf(ArrayBuffer);
       expect(PNRA_SERIALIZED.equals(Buffer.from(authorizationSerialized))).toBeTruthy();
@@ -278,8 +284,8 @@ describe('PoWebClient', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       expectedRegistration = new PrivateNodeRegistration(
-        certificationPath.privateGateway.certificate,
-        certificationPath.publicGateway.certificate,
+        certificationPath.privateGateway,
+        certificationPath.publicGateway,
       );
       expectedRegistrationSerialized = Buffer.from(expectedRegistration.serialize());
     });
@@ -352,10 +358,7 @@ describe('PoWebClient', () => {
     const parcelSerialized = bufferToArray(Buffer.from('I am a "parcel"'));
     let signer: Signer;
     beforeAll(async () => {
-      signer = new Signer(
-        certificationPath.privateGateway.certificate,
-        certificationPath.privateGateway.privateKey,
-      );
+      signer = new Signer(certificationPath.privateGateway, nodeKeyPairs.privateGateway.privateKey);
     });
 
     let client: PoWebClient;
@@ -391,7 +394,7 @@ describe('PoWebClient', () => {
       await DETACHED_SIGNATURE_TYPES.PARCEL_DELIVERY.verify(
         bufferToArray(countersignature),
         parcelSerialized,
-        [certificationPath.publicGateway.certificate],
+        [certificationPath.publicGateway],
       );
     });
 
@@ -456,8 +459,7 @@ describe('PoWebClient', () => {
 
     let nonceSigner: Signer;
     beforeAll(async () => {
-      const subject = certificationPath.privateEndpoint;
-      nonceSigner = new Signer(subject.certificate, subject.privateKey);
+      nonceSigner = new Signer(certificationPath.privateEndpoint, nodeKeyPairs.privateEndpoint.privateKey);
     });
 
     test('Maximum incoming payload size should be enough for large parcels', async () => {
@@ -589,7 +591,7 @@ describe('PoWebClient', () => {
         expect(response.nonceSignatures).toHaveLength(1);
 
         await DETACHED_SIGNATURE_TYPES.NONCE.verify(response.nonceSignatures[0], NONCE, [
-          certificationPath.privateGateway.certificate,
+          certificationPath.privateGateway,
         ]);
       });
     });
@@ -854,10 +856,10 @@ describe('PoWebClient', () => {
         const client = PoWebClient.initLocal();
         const nonceSigner2KeyPair = await generateRSAKeyPair();
         const nonceSigner2Certificate = await issueEndpointCertificate({
-          issuerCertificate: certificationPath.privateGateway.certificate,
-          issuerPrivateKey: certificationPath.privateGateway.privateKey,
+          issuerCertificate: certificationPath.privateGateway,
+          issuerPrivateKey: nodeKeyPairs.privateGateway.privateKey,
           subjectPublicKey: nonceSigner2KeyPair.publicKey,
-          validityEndDate: certificationPath.privateGateway.certificate.expiryDate,
+          validityEndDate: certificationPath.privateGateway.expiryDate,
         });
         const nonceSigner2 = new Signer(nonceSigner2Certificate, nonceSigner2KeyPair.privateKey);
 
