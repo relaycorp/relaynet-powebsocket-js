@@ -459,7 +459,10 @@ describe('PoWebClient', () => {
 
     let nonceSigner: Signer;
     beforeAll(async () => {
-      nonceSigner = new Signer(certificationPath.privateEndpoint, nodeKeyPairs.privateEndpoint.privateKey);
+      nonceSigner = new Signer(
+        certificationPath.privateEndpoint,
+        nodeKeyPairs.privateEndpoint.privateKey,
+      );
     });
 
     test('Maximum incoming payload size should be enough for large parcels', async () => {
