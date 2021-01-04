@@ -46,7 +46,7 @@
     "it-pipe": "^1.1.0",
     "stream-to-it": "^0.2.2",
     "verror": "^1.10.0",
-    "ws": "^7.4.1"
+    "ws": "^7.4.2"
   },
   "devDependencies": {
     "@relaycorp/relaynet-testing": "^1.1.0",
