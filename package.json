@@ -42,7 +42,7 @@
   "dependencies": {
     "@relaycorp/relaynet-core": ">= 1.41.0 < 2",
     "axios": "^0.21.1",
-    "buffer-to-arraybuffer": "0.0.5",
+    "buffer-to-arraybuffer": "0.0.6",
     "it-pipe": "^1.1.0",
     "stream-to-it": "^0.2.2",
     "verror": "^1.10.0",
