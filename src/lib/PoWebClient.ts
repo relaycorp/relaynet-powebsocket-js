@@ -37,10 +37,10 @@ const DEFAULT_REMOTE_TIMEOUT_MS = 5_000;
 
 const OCTETS_IN_ONE_MIB = 2 ** 20;
 
-export const PNRA_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.authorization';
-export const PNRR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.request';
-export const PNR_CONTENT_TYPE = 'application/vnd.relaynet.node-registration.registration';
-export const PARCEL_CONTENT_TYPE = 'application/vnd.relaynet.parcel';
+export const PNRA_CONTENT_TYPE = 'application/vnd.awala.node-registration.authorization';
+export const PNRR_CONTENT_TYPE = 'application/vnd.awala.node-registration.request';
+export const PNR_CONTENT_TYPE = 'application/vnd.awala.node-registration.registration';
+export const PARCEL_CONTENT_TYPE = 'application/vnd.awala.parcel';
 
 /**
  * PoWeb client.
