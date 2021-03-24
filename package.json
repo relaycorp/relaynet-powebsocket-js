@@ -52,7 +52,7 @@
     "@relaycorp/relaynet-testing": "^1.1.4",
     "@relaycorp/shared-config": "^1.4.13",
     "@relaycorp/ws-mock": "^1.4.11",
-    "@types/jest": "^26.0.20",
+    "@types/jest": "^26.0.21",
     "@types/verror": "^1.10.4",
     "@types/ws": "^7.4.0",
     "axios-mock-adapter": "^1.19.0",
