@@ -12,6 +12,7 @@ import {
   ParcelDelivery,
   PrivateNodeRegistration,
   Signer,
+  StreamingMode,
 } from '@relaycorp/relaynet-core';
 import {
   generateNodeKeyPairSet,
@@ -48,7 +49,6 @@ import {
   RefusedParcelError,
   ServerError,
 } from './errors';
-import { StreamingMode } from './StreamingMode';
 
 let mockServer: MockServer;
 beforeEach(() => {
