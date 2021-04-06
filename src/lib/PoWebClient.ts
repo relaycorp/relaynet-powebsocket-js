@@ -1,6 +1,7 @@
 import {
   derSerializePublicKey,
   DETACHED_SIGNATURE_TYPES,
+  GSCClient,
   HandshakeChallenge,
   HandshakeResponse,
   MAX_RAMF_MESSAGE_LENGTH,
@@ -8,6 +9,7 @@ import {
   ParcelDelivery,
   PrivateNodeRegistration,
   Signer,
+  StreamingMode,
 } from '@relaycorp/relaynet-core';
 import axios, { AxiosInstance } from 'axios';
 import bufferToArray from 'buffer-to-arraybuffer';
@@ -27,7 +29,6 @@ import {
   RefusedParcelError,
   ServerError,
 } from './errors';
-import { StreamingMode } from './StreamingMode';
 
 const DEFAULT_LOCAL_PORT = 276;
 const DEFAULT_REMOVE_PORT = 443;
@@ -45,7 +46,7 @@ export const PARCEL_CONTENT_TYPE = 'application/vnd.awala.parcel';
 /**
  * PoWeb client.
  */
-export class PoWebClient {
+export class PoWebClient implements GSCClient {
   /**
    * Connect to a private gateway from a private endpoint.
    *
