@@ -2704,9 +2704,6 @@ img {
 </header>
 <nav class="tsd-navigation secondary">
 	<ul>
-		<li class=" tsd-kind-enum">
-			<a href="../enums/streamingmode.html" class="tsd-kind-icon">Streaming<wbr>Mode</a>
-		</li>
 		<li class=" tsd-kind-class">
 			<a href="clienterror.html" class="tsd-kind-icon">Client<wbr>Error</a>
 		</li>
@@ -2779,6 +2776,12 @@ img {
 				</li>
 			</ul>
 		</section>
+		<section class="tsd-panel">
+			<h3>Implements</h3>
+			<ul class="tsd-hierarchy">
+				<li><span class="tsd-signature-type">GSCClient</span></li>
+			</ul>
+		</section>
 		<section class="tsd-panel-group tsd-index-group">
 			<h2>Index</h2>
 			<section class="tsd-panel tsd-index-panel">
@@ -2835,13 +2838,14 @@ img {
 				<a name="collectparcels" class="tsd-anchor"></a>
 				<h3>collect<wbr>Parcels</h3>
 				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-					<li class="tsd-signature tsd-kind-icon">collect<wbr>Parcels<span class="tsd-signature-symbol">(</span>nonceSigners<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-type">Signer</span><span class="tsd-signature-symbol">[]</span>, streamingMode<span class="tsd-signature-symbol">?: </span><a href="../enums/streamingmode.html" class="tsd-signature-type" data-tsd-kind="Enumeration">StreamingMode</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ParcelCollection</span><span class="tsd-signature-symbol">&gt;</span></li>
+					<li class="tsd-signature tsd-kind-icon">collect<wbr>Parcels<span class="tsd-signature-symbol">(</span>nonceSigners<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-type">Signer</span><span class="tsd-signature-symbol">[]</span>, streamingMode<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">StreamingMode</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ParcelCollection</span><span class="tsd-signature-symbol">&gt;</span></li>
 				</ul>
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
 						<aside class="tsd-sources">
+							<p>Implementation of GSCClient.collectParcels</p>
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/0a551a6/src/lib/PoWebClient.ts#L201">src/lib/PoWebClient.ts:201</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/154d4df/src/lib/PoWebClient.ts#L202">src/lib/PoWebClient.ts:202</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -2858,7 +2862,7 @@ img {
 								</div>
 							</li>
 							<li>
-								<h5>streamingMode: <a href="../enums/streamingmode.html" class="tsd-signature-type" data-tsd-kind="Enumeration">StreamingMode</a><span class="tsd-signature-symbol"> = ...</span></h5>
+								<h5>streamingMode: <span class="tsd-signature-type">StreamingMode</span><span class="tsd-signature-symbol"> = ...</span></h5>
 								<div class="tsd-comment tsd-typography">
 								</div>
 							</li>
@@ -2876,8 +2880,9 @@ img {
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
 						<aside class="tsd-sources">
+							<p>Implementation of GSCClient.deliverParcel</p>
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/0a551a6/src/lib/PoWebClient.ts#L171">src/lib/PoWebClient.ts:171</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/154d4df/src/lib/PoWebClient.ts#L172">src/lib/PoWebClient.ts:172</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -2909,8 +2914,9 @@ img {
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
 						<aside class="tsd-sources">
+							<p>Implementation of GSCClient.preRegisterNode</p>
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/0a551a6/src/lib/PoWebClient.ts#L122">src/lib/PoWebClient.ts:122</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/154d4df/src/lib/PoWebClient.ts#L123">src/lib/PoWebClient.ts:123</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -2946,8 +2952,9 @@ img {
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
 						<aside class="tsd-sources">
+							<p>Implementation of GSCClient.registerNode</p>
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/0a551a6/src/lib/PoWebClient.ts#L147">src/lib/PoWebClient.ts:147</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/154d4df/src/lib/PoWebClient.ts#L148">src/lib/PoWebClient.ts:148</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -2978,7 +2985,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/0a551a6/src/lib/PoWebClient.ts#L56">src/lib/PoWebClient.ts:56</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/154d4df/src/lib/PoWebClient.ts#L57">src/lib/PoWebClient.ts:57</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -3010,7 +3017,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/0a551a6/src/lib/PoWebClient.ts#L66">src/lib/PoWebClient.ts:66</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/154d4df/src/lib/PoWebClient.ts#L67">src/lib/PoWebClient.ts:67</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
