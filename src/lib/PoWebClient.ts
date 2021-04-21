@@ -198,10 +198,12 @@ export class PoWebClient implements GSCClient {
    *
    * @param nonceSigners The keys for the private nodes on whose behalf parcels are being collected
    * @param streamingMode
+   * @param handshakeCallback Function to call after completing the handshake successfully
    */
   public async *collectParcels(
     nonceSigners: readonly Signer[],
     streamingMode: StreamingMode = StreamingMode.KEEP_ALIVE,
+    handshakeCallback?: () => void,
   ): AsyncIterable<ParcelCollection> {
     if (nonceSigners.length === 0) {
       throw new NonceSignerError('At least one nonce signer must be specified');
@@ -222,6 +224,7 @@ export class PoWebClient implements GSCClient {
     });
 
     await this.doHandshake(ws, nonceSigners);
+    handshakeCallback?.();
 
     const incomingDeliveries = source(createWebSocketStream(ws));
 
