@@ -2838,14 +2838,14 @@ img {
 				<a name="collectparcels" class="tsd-anchor"></a>
 				<h3>collect<wbr>Parcels</h3>
 				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-					<li class="tsd-signature tsd-kind-icon">collect<wbr>Parcels<span class="tsd-signature-symbol">(</span>nonceSigners<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-type">Signer</span><span class="tsd-signature-symbol">[]</span>, streamingMode<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">StreamingMode</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ParcelCollection</span><span class="tsd-signature-symbol">&gt;</span></li>
+					<li class="tsd-signature tsd-kind-icon">collect<wbr>Parcels<span class="tsd-signature-symbol">(</span>nonceSigners<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-type">Signer</span><span class="tsd-signature-symbol">[]</span>, streamingMode<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">StreamingMode</span>, handshakeCallback<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ParcelCollection</span><span class="tsd-signature-symbol">&gt;</span></li>
 				</ul>
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<p>Implementation of GSCClient.collectParcels</p>
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/921ad07/src/lib/PoWebClient.ts#L202">src/lib/PoWebClient.ts:202</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/cc4f89c/src/lib/PoWebClient.ts#L203">src/lib/PoWebClient.ts:203</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -2863,8 +2863,24 @@ img {
 							</li>
 							<li>
 								<h5>streamingMode: <span class="tsd-signature-type">StreamingMode</span><span class="tsd-signature-symbol"> = ...</span></h5>
+							</li>
+							<li>
+								<h5><span class="tsd-flag ts-flagOptional">Optional</span> handshakeCallback: <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
 								<div class="tsd-comment tsd-typography">
+									<p>Function to call after completing the handshake successfully</p>
 								</div>
+								<ul class="tsd-parameters">
+									<li class="tsd-parameter-signature">
+										<ul class="tsd-signatures tsd-kind-type-literal">
+											<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+										</ul>
+										<ul class="tsd-descriptions">
+											<li class="tsd-description">
+												<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+											</li>
+										</ul>
+									</li>
+								</ul>
 							</li>
 						</ul>
 						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">AsyncIterable</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">ParcelCollection</span><span class="tsd-signature-symbol">&gt;</span></h4>
@@ -2882,7 +2898,7 @@ img {
 						<aside class="tsd-sources">
 							<p>Implementation of GSCClient.deliverParcel</p>
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/921ad07/src/lib/PoWebClient.ts#L172">src/lib/PoWebClient.ts:172</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/cc4f89c/src/lib/PoWebClient.ts#L172">src/lib/PoWebClient.ts:172</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -2916,7 +2932,7 @@ img {
 						<aside class="tsd-sources">
 							<p>Implementation of GSCClient.preRegisterNode</p>
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/921ad07/src/lib/PoWebClient.ts#L123">src/lib/PoWebClient.ts:123</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/cc4f89c/src/lib/PoWebClient.ts#L123">src/lib/PoWebClient.ts:123</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -2954,7 +2970,7 @@ img {
 						<aside class="tsd-sources">
 							<p>Implementation of GSCClient.registerNode</p>
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/921ad07/src/lib/PoWebClient.ts#L148">src/lib/PoWebClient.ts:148</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/cc4f89c/src/lib/PoWebClient.ts#L148">src/lib/PoWebClient.ts:148</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -2985,7 +3001,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/921ad07/src/lib/PoWebClient.ts#L57">src/lib/PoWebClient.ts:57</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/cc4f89c/src/lib/PoWebClient.ts#L57">src/lib/PoWebClient.ts:57</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
@@ -3017,7 +3033,7 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 							<ul>
-								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/921ad07/src/lib/PoWebClient.ts#L67">src/lib/PoWebClient.ts:67</a></li>
+								<li>Defined in <a href="https://github.com/relaycorp/relaynet-poweb-js/blob/cc4f89c/src/lib/PoWebClient.ts#L67">src/lib/PoWebClient.ts:67</a></li>
 							</ul>
 						</aside>
 						<div class="tsd-comment tsd-typography">
