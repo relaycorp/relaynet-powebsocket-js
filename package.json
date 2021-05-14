@@ -44,9 +44,9 @@
     "axios": "^0.21.1",
     "buffer-to-arraybuffer": "0.0.6",
     "it-pipe": "^1.1.0",
-    "stream-to-it": "^0.2.2",
+    "stream-to-it": "^0.2.3",
     "verror": "^1.10.0",
-    "ws": "^7.4.4"
+    "ws": "^7.4.5"
   },
   "devDependencies": {
     "@relaycorp/relaynet-testing": "^1.1.5",
@@ -65,7 +65,7 @@
     "ts-jest": "^24.3.0",
     "ts-node": "^9.1.1",
     "tslint": "^5.20.1",
-    "typedoc": "^0.20.35",
+    "typedoc": "^0.20.36",
     "typescript": "^3.9.9"
   },
   "peerDependencies": {
