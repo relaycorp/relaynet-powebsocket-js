@@ -406,8 +406,8 @@ describe('PoWebClient', () => {
       await client.deliverParcel(parcelSerialized, signer);
     });
 
-    test('HTTP 403 should throw a RefusedParcelError', async () => {
-      mockAxios.onPost('/parcels').reply(403, null);
+    test('HTTP 422 should throw a RefusedParcelError', async () => {
+      mockAxios.onPost('/parcels').reply(422, null);
 
       const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
 
@@ -417,7 +417,7 @@ describe('PoWebClient', () => {
 
     test('RefusedParcelError should include rejection reason if available', async () => {
       const message = 'Not enough postage';
-      mockAxios.onPost('/parcels').reply(403, { message });
+      mockAxios.onPost('/parcels').reply(422, { message });
 
       const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
 
@@ -434,7 +434,7 @@ describe('PoWebClient', () => {
       expect(error.message).toEqual('Server was unable to get parcel (HTTP 500)');
     });
 
-    test('HTTP responses other than 20X/403/50X should throw errors', async () => {
+    test('HTTP responses other than 20X/422/50X should throw errors', async () => {
       mockAxios.onPost('/parcels').reply(400, null);
 
       const error = await getRejection(client.deliverParcel(parcelSerialized, signer));
