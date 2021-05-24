@@ -889,14 +889,11 @@ describe('PoWebClient', () => {
         const deliveryId = 'id1';
 
         await Promise.all([
-          pipe(
-            client.collectParcels([nonceSigner]),
-            async (collections): Promise<void> => {
-              for await (const collection of collections) {
-                await collection.ack();
-              }
-            },
-          ),
+          pipe(client.collectParcels([nonceSigner]), async (collections): Promise<void> => {
+            for await (const collection of collections) {
+              await collection.ack();
+            }
+          }),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
