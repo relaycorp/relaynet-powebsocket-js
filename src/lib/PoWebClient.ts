@@ -182,7 +182,7 @@ export class PoWebClient implements GSCClient {
     }
 
     const errorMessage = response.data?.message;
-    if (response.status === 403) {
+    if (response.status === 422) {
       throw new RefusedParcelError(
         errorMessage ? `Parcel was rejected: ${errorMessage}` : 'Parcel was rejected',
       );
