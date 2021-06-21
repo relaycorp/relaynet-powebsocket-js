@@ -40,7 +40,7 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@relaycorp/relaynet-core": "^1.45.0",
+    "@relaycorp/relaynet-core": "^1.46.0",
     "axios": "^0.21.1",
     "buffer-to-arraybuffer": "0.0.6",
     "it-pipe": "^1.1.0",
@@ -64,7 +64,7 @@
     "ts-jest": "^24.3.0",
     "ts-node": "^10.0.0",
     "tslint": "^5.20.1",
-    "typedoc": "^0.20.36",
+    "typedoc": "^0.20.37",
     "typescript": "^3.9.9"
   },
   "peerDependencies": {
