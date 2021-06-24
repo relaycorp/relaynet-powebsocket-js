@@ -597,6 +597,43 @@ describe('PoWebClient', () => {
           certificationPath.privateGateway,
         ]);
       });
+
+      describe('Handshake completion callback', () => {
+        test('Callback should not be called if handshake fails', async () => {
+          const client = PoWebClient.initLocal();
+          const handshakeCallback = jest.fn();
+
+          await expect(
+            Promise.all([
+              asyncIterableToArray(
+                client.collectParcels([nonceSigner], StreamingMode.KEEP_ALIVE, handshakeCallback),
+              ),
+              mockServer.runActions(new CloseConnectionAction()),
+            ]),
+          ).toReject();
+
+          expect(handshakeCallback).not.toBeCalled();
+        });
+
+        test('Callback should be called after handshake but before the first parcel', async () => {
+          const client = PoWebClient.initLocal();
+          const handshakeCallback = jest.fn();
+
+          await Promise.all([
+            asyncIterableToArray(
+              client.collectParcels([nonceSigner], StreamingMode.KEEP_ALIVE, handshakeCallback),
+            ),
+            mockServer.runActions(
+              new AcceptConnectionAction(),
+              new SendHandshakeChallengeAction(NONCE),
+              new ReceiveMessageAction(), // Handshake response
+              new CloseConnectionAction(),
+            ),
+          ]);
+
+          await expect(handshakeCallback).toBeCalledWith();
+        });
+      });
     });
 
     test('Call should return if server closed connection normally after the handshake', async () => {
@@ -906,43 +943,6 @@ describe('PoWebClient', () => {
 
         expect(ackReceiver.wasRun).toBeTrue();
         expect(ackReceiver.message).toEqual(deliveryId);
-      });
-    });
-
-    describe('Handshake completion callback', () => {
-      test('Callback should not be called if handshake fails', async () => {
-        const client = PoWebClient.initLocal();
-        const handshakeCallback = jest.fn();
-
-        await expect(
-          Promise.all([
-            asyncIterableToArray(
-              client.collectParcels([nonceSigner], StreamingMode.KEEP_ALIVE, handshakeCallback),
-            ),
-            mockServer.runActions(new CloseConnectionAction()),
-          ]),
-        ).toReject();
-
-        expect(handshakeCallback).not.toBeCalled();
-      });
-
-      test('Callback should be called after handshake but before the first parcel', async () => {
-        const client = PoWebClient.initLocal();
-        const handshakeCallback = jest.fn();
-
-        await Promise.all([
-          asyncIterableToArray(
-            client.collectParcels([nonceSigner], StreamingMode.KEEP_ALIVE, handshakeCallback),
-          ),
-          mockServer.runActions(
-            new AcceptConnectionAction(),
-            new SendHandshakeChallengeAction(NONCE),
-            new ReceiveMessageAction(), // Handshake response
-            new CloseConnectionAction(),
-          ),
-        ]);
-
-        await expect(handshakeCallback).toBeCalledWith();
       });
     });
   });
