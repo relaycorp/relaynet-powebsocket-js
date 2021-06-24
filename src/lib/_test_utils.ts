@@ -44,3 +44,7 @@ export function expectArrayBuffersToEqual(
   const actualBuffer = Buffer.from(actualArrayBuffer);
   expect(expectedBuffer.equals(actualBuffer)).toBeTrue();
 }
+
+export function getMockInstance(mockedObject: any): jest.MockInstance<any, any> {
+  return mockedObject as unknown as jest.MockInstance<any, any>;
+}
