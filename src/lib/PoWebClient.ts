@@ -216,7 +216,7 @@ export class PoWebClient implements GSCClient {
 
   protected async *_collectParcels(
     nonceSigners: readonly Signer[],
-    streamingMode: StreamingMode = StreamingMode.KEEP_ALIVE,
+    streamingMode: StreamingMode,
     handshakeCallback?: () => void,
   ): AsyncIterable<ParcelCollection> {
     const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
