@@ -209,6 +209,16 @@ export class PoWebClient implements GSCClient {
       throw new NonceSignerError('At least one nonce signer must be specified');
     }
 
+    do {
+      yield* await this._collectParcels(nonceSigners, streamingMode, handshakeCallback);
+    } while (streamingMode === StreamingMode.KEEP_ALIVE);
+  }
+
+  protected async *_collectParcels(
+    nonceSigners: readonly Signer[],
+    streamingMode: StreamingMode,
+    handshakeCallback?: () => void,
+  ): AsyncIterable<ParcelCollection> {
     const wsURL = resolveURL(this.wsBaseURL, 'parcel-collection');
     const ws = new WebSocket(wsURL, {
       headers: { 'X-Relaynet-Streaming-Mode': streamingMode },

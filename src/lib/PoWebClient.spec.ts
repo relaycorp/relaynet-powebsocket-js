@@ -38,6 +38,7 @@ import pipe from 'it-pipe';
 import {
   asyncIterableToArray,
   expectArrayBuffersToEqual,
+  getMockInstance,
   getPromiseRejection,
   iterableTake,
 } from './_test_utils';
@@ -50,15 +51,11 @@ import {
   ServerError,
 } from './errors';
 
-let mockServer: MockServer;
-beforeEach(() => {
-  mockServer = new MockServer();
-});
 const mockCreateWebSocketStream = createMockWebSocketStream;
 jest.mock('ws', () => ({
   __esModule: true,
   createWebSocketStream: mockCreateWebSocketStream,
-  default: jest.fn().mockImplementation(() => mockServer.mockClientWebSocket),
+  default: jest.fn(),
 }));
 import WebSocket, { ClientOptions } from 'ws';
 import {
@@ -465,12 +462,21 @@ describe('PoWebClient', () => {
       );
     });
 
+    let mockServer: MockServer;
+    beforeEach(() => {
+      mockServer = new MockServer();
+      getMockInstance(WebSocket).mockImplementation(() => mockServer.mockClientWebSocket);
+    });
+    afterEach(() => {
+      getMockInstance(WebSocket).mockReset();
+    });
+
     test('Maximum incoming payload size should be enough for large parcels', async () => {
       const client = PoWebClient.initLocal();
 
       await Promise.all([
         asyncIterableToArray(client.collectParcels([nonceSigner])).catch(() => undefined),
-        mockServer.runActions(new CloseConnectionAction()),
+        mockServer.runActions(new AcceptConnectionAction(), new CloseConnectionAction()),
       ]);
 
       expect(WebSocket).toBeCalledWith(
@@ -484,7 +490,7 @@ describe('PoWebClient', () => {
 
       await Promise.all([
         asyncIterableToArray(client.collectParcels([nonceSigner])).catch(() => undefined),
-        mockServer.runActions(new CloseConnectionAction()),
+        mockServer.runActions(new AcceptConnectionAction(), new CloseConnectionAction()),
       ]);
 
       expect(WebSocket).toBeCalledWith(ENDPOINT_URL.toString(), expect.anything());
@@ -506,7 +512,7 @@ describe('PoWebClient', () => {
 
         const sessionPromise = Promise.all([
           asyncIterableToArray(client.collectParcels([nonceSigner])),
-          mockServer.runActions(new CloseConnectionAction()),
+          mockServer.runActions(new AcceptConnectionAction(), new CloseConnectionAction()),
         ]);
 
         const error = await getPromiseRejection(sessionPromise);
@@ -578,7 +584,9 @@ describe('PoWebClient', () => {
         const receiveResponseAction = new ReceiveMessageAction();
 
         await Promise.all([
-          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          asyncIterableToArray(
+            client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+          ),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
@@ -597,13 +605,56 @@ describe('PoWebClient', () => {
           certificationPath.privateGateway,
         ]);
       });
+
+      describe('Handshake completion callback', () => {
+        test('Callback should not be called if handshake fails', async () => {
+          const client = PoWebClient.initLocal();
+          const handshakeCallback = jest.fn();
+
+          await expect(
+            Promise.all([
+              asyncIterableToArray(
+                client.collectParcels([nonceSigner], StreamingMode.KEEP_ALIVE, handshakeCallback),
+              ),
+              mockServer.runActions(new AcceptConnectionAction(), new CloseConnectionAction()),
+            ]),
+          ).toReject();
+
+          expect(handshakeCallback).not.toBeCalled();
+        });
+
+        test('Callback should be called after handshake but before the first parcel', async () => {
+          const client = PoWebClient.initLocal();
+          const handshakeCallback = jest.fn();
+
+          await Promise.all([
+            asyncIterableToArray(
+              client.collectParcels(
+                [nonceSigner],
+                StreamingMode.CLOSE_UPON_COMPLETION,
+                handshakeCallback,
+              ),
+            ),
+            mockServer.runActions(
+              new AcceptConnectionAction(),
+              new SendHandshakeChallengeAction(NONCE),
+              new ReceiveMessageAction(), // Handshake response
+              new CloseConnectionAction(),
+            ),
+          ]);
+
+          await expect(handshakeCallback).toBeCalledWith();
+        });
+      });
     });
 
     test('Call should return if server closed connection normally after the handshake', async () => {
       const client = PoWebClient.initLocal();
 
       const [parcelCollections] = await Promise.all([
-        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        asyncIterableToArray(
+          client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+        ),
         mockServer.runActions(
           new AcceptConnectionAction(),
           new SendHandshakeChallengeAction(NONCE),
@@ -623,7 +674,9 @@ describe('PoWebClient', () => {
       const client = PoWebClient.initLocal();
 
       await Promise.all([
-        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        asyncIterableToArray(
+          client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+        ),
         mockServer.runActions(
           new AcceptConnectionAction(),
           new SendHandshakeChallengeAction(NONCE),
@@ -713,7 +766,9 @@ describe('PoWebClient', () => {
       const client = PoWebClient.initLocal();
 
       await Promise.all([
-        asyncIterableToArray(client.collectParcels([nonceSigner])),
+        asyncIterableToArray(
+          client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+        ),
         mockServer.runActions(
           new AcceptConnectionAction(),
           new SendHandshakeChallengeAction(NONCE),
@@ -754,7 +809,7 @@ describe('PoWebClient', () => {
 
         await Promise.all([
           asyncIterableToArray(client.collectParcels([nonceSigner])).catch(() => undefined),
-          mockServer.runActions(new CloseConnectionAction()),
+          mockServer.runActions(new AcceptConnectionAction(), new CloseConnectionAction()),
         ]);
 
         expect(WebSocket).toBeCalledWith(
@@ -772,7 +827,7 @@ describe('PoWebClient', () => {
           asyncIterableToArray(
             client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
           ).catch(() => undefined),
-          mockServer.runActions(new CloseConnectionAction()),
+          mockServer.runActions(new AcceptConnectionAction(), new CloseConnectionAction()),
         ]);
 
         expect(WebSocket).toBeCalledWith(
@@ -784,12 +839,83 @@ describe('PoWebClient', () => {
       });
     });
 
+    describe('Reconnections', () => {
+      test('Connection should be recreated if it ended normally and Keep Alive is on', async () => {
+        const mockServer1 = new MockServer();
+        const parcel1Serialized = Buffer.from('parcel1');
+        getMockInstance(WebSocket).mockImplementationOnce(() => {
+          setImmediate(() => {
+            mockServer1.runActions(
+              new AcceptConnectionAction(),
+              new SendHandshakeChallengeAction(NONCE),
+              new ReceiveMessageAction(), // Handshake response
+              new DeliverParcelAction(bufferToArray(parcel1Serialized), 'id1'),
+              new CloseConnectionAction(WebSocketCode.NO_STATUS),
+            );
+          });
+          return mockServer1.mockClientWebSocket;
+        });
+        const mockServer2 = new MockServer();
+        const parcel2Serialized = Buffer.from('parcel2');
+        getMockInstance(WebSocket).mockImplementationOnce(() => {
+          setImmediate(() => {
+            mockServer2.runActions(
+              new AcceptConnectionAction(),
+              new SendHandshakeChallengeAction(NONCE),
+              new ReceiveMessageAction(), // Handshake response
+              new DeliverParcelAction(bufferToArray(parcel2Serialized), 'id2'),
+              new CloseConnectionAction(WebSocketCode.NO_STATUS),
+            );
+          });
+          return mockServer2.mockClientWebSocket;
+        });
+        const client = PoWebClient.initLocal();
+
+        const parcelCollections = await asyncIterableToArray(
+          iterableTake(client.collectParcels([nonceSigner], StreamingMode.KEEP_ALIVE), 2),
+        );
+
+        expect(
+          parcel1Serialized.equals(Buffer.from(parcelCollections[0].parcelSerialized)),
+        ).toBeTrue();
+        expect(
+          parcel2Serialized.equals(Buffer.from(parcelCollections[1].parcelSerialized)),
+        ).toBeTrue();
+        await expect(mockServer1.wasConnectionClosed).toBeTrue();
+        await expect(mockServer2.wasConnectionClosed).toBeTrue();
+      });
+
+      test.each([StreamingMode.CLOSE_UPON_COMPLETION, StreamingMode.KEEP_ALIVE])(
+        'Connection should not be recreated if it ended normally and streaming mode is %s',
+        async (mode) => {
+          const client = PoWebClient.initLocal();
+
+          await expect(
+            Promise.all([
+              asyncIterableToArray(iterableTake(client.collectParcels([nonceSigner], mode), 1)),
+              mockServer.runActions(
+                new AcceptConnectionAction(),
+                new SendHandshakeChallengeAction(NONCE),
+                new ReceiveMessageAction(), // Handshake response
+                new CloseConnectionAction(WebSocketCode.VIOLATED_POLICY),
+              ),
+            ]),
+          ).rejects.toBeInstanceOf(ServerError);
+
+          expect(WebSocket).toBeCalledTimes(1);
+          await expect(mockServer.wasConnectionClosed).toBeTrue();
+        },
+      );
+    });
+
     describe('Collection', () => {
       test("No collection should be output if the server doesn't deliver anything", async () => {
         const client = PoWebClient.initLocal();
 
         const [parcelCollections] = await Promise.all([
-          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          asyncIterableToArray(
+            client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+          ),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
@@ -805,7 +931,9 @@ describe('PoWebClient', () => {
         const client = PoWebClient.initLocal();
 
         const [parcelCollections] = await Promise.all([
-          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          asyncIterableToArray(
+            client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+          ),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
@@ -823,7 +951,9 @@ describe('PoWebClient', () => {
         const client = PoWebClient.initLocal();
 
         const [parcelCollections] = await Promise.all([
-          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          asyncIterableToArray(
+            client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+          ),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
@@ -842,7 +972,9 @@ describe('PoWebClient', () => {
         const parcelSerialized = bufferToArray(Buffer.from('I am a parcel :wink: :wink:'));
 
         const [parcelCollections] = await Promise.all([
-          asyncIterableToArray(client.collectParcels([nonceSigner])),
+          asyncIterableToArray(
+            client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+          ),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
@@ -867,7 +999,9 @@ describe('PoWebClient', () => {
         const nonceSigner2 = new Signer(nonceSigner2Certificate, nonceSigner2KeyPair.privateKey);
 
         const [parcelCollections] = await Promise.all([
-          asyncIterableToArray(client.collectParcels([nonceSigner, nonceSigner2])),
+          asyncIterableToArray(
+            client.collectParcels([nonceSigner, nonceSigner2], StreamingMode.CLOSE_UPON_COMPLETION),
+          ),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
@@ -889,11 +1023,14 @@ describe('PoWebClient', () => {
         const deliveryId = 'id1';
 
         await Promise.all([
-          pipe(client.collectParcels([nonceSigner]), async (collections): Promise<void> => {
-            for await (const collection of collections) {
-              await collection.ack();
-            }
-          }),
+          pipe(
+            client.collectParcels([nonceSigner], StreamingMode.CLOSE_UPON_COMPLETION),
+            async (collections): Promise<void> => {
+              for await (const collection of collections) {
+                await collection.ack();
+              }
+            },
+          ),
           mockServer.runActions(
             new AcceptConnectionAction(),
             new SendHandshakeChallengeAction(NONCE),
@@ -906,43 +1043,6 @@ describe('PoWebClient', () => {
 
         expect(ackReceiver.wasRun).toBeTrue();
         expect(ackReceiver.message).toEqual(deliveryId);
-      });
-    });
-
-    describe('Handshake completion callback', () => {
-      test('Callback should not be called if handshake fails', async () => {
-        const client = PoWebClient.initLocal();
-        const handshakeCallback = jest.fn();
-
-        await expect(
-          Promise.all([
-            asyncIterableToArray(
-              client.collectParcels([nonceSigner], StreamingMode.KEEP_ALIVE, handshakeCallback),
-            ),
-            mockServer.runActions(new CloseConnectionAction()),
-          ]),
-        ).toReject();
-
-        expect(handshakeCallback).not.toBeCalled();
-      });
-
-      test('Callback should be called after handshake but before the first parcel', async () => {
-        const client = PoWebClient.initLocal();
-        const handshakeCallback = jest.fn();
-
-        await Promise.all([
-          asyncIterableToArray(
-            client.collectParcels([nonceSigner], StreamingMode.KEEP_ALIVE, handshakeCallback),
-          ),
-          mockServer.runActions(
-            new AcceptConnectionAction(),
-            new SendHandshakeChallengeAction(NONCE),
-            new ReceiveMessageAction(), // Handshake response
-            new CloseConnectionAction(),
-          ),
-        ]);
-
-        await expect(handshakeCallback).toBeCalledWith();
       });
     });
   });
